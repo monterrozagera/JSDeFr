@@ -12,7 +12,7 @@ def logic(number_1):
     number_1 = number_1 - 105 ## replace this
     return secret_array[number_1]
 
-regex = 'pylon_core_0x3a87\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'
+regex = '_0x3a87\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## replace this
 ele = []
 clean = []
 new_lines = ''
@@ -35,5 +35,5 @@ with open('framework.js_', 'r') as wb: ## replace name
         pass
         
 
-with open('new_new_pylon.js_', 'w') as wb:
+with open('new.js_', 'w') as wb:
     wb.write(lines)
