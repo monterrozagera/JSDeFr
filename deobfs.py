@@ -1,10 +1,101 @@
+# INSTRUCTIONS
+# 1.Find function containing the deobfuscation array and replace the variable 'secrets'
+# 2.Find function containing the algorithm to replace the obfuscated values with the correct values from the array and replace the variable 'magic number'
+# 3.Replace the regex variable with the correct name of the function that deobfuscates
+# 4.Replace the variable js_script with the name of the script to deobfuscate
+
+# TODO: add options for 1,2,3,4 argument function to replace
+# args parse, better feedback, pluggins, multiple regex
+# remember, stick to what you can do. theres about 10 days left
 import re
 
 def logic_js(array: list, number_1: int, magic_num: int) -> str:
     """ Recreate logic from array translate function. """
     secret_array = array   
-    number_1 = number_1 - magic_num ## replace this ex. '105'
+    number_1 = number_1 - magic_num
     return secret_array[number_1]
+
+
+class Array_Replace:
+    """ Handles different kinds of array-based deobfuscation. """
+    def __init__(self, rgx: str, script_in: str, script_out: str, secrets: list, hex_translate: bool):
+        self.s_name = script_in
+        self.o_name = script_out 
+        self.s_array = secrets
+        self.regex = rgx
+        self.t_hex = hex_translate
+
+        if self.t_hex:
+            self.hexReplace()
+
+    def countIntances(self, to_count):
+        """ This function will count the times that the given argument is referenced """
+        """ in the script. """
+        pass
+
+    def hexReplace(self):
+        """ This function will replace all hex digits to decimals. """
+        hex_regex = r'\b0x[0-9A-Fa-f]{1,5}'
+        ele = []
+        clean = []
+
+        with open(self.s_name, 'r') as wb: ## replace name
+            lines = wb.read()
+            matches = re.findall(hex_regex, lines)
+
+            for item in matches:
+                ele.append(item)
+            for item in ele:
+                clean.append(int(item, 16))
+
+            try:
+                for item in clean:
+                    lines = re.sub(hex_regex, str(item), lines, count=1)
+            except re.error:
+                pass
+            
+        with open(self.o_name, 'w') as wb:
+            wb.write(lines)
+
+        self.s_name = self.o_name
+
+        
+class mode_1(Array_Replace):
+    """ Mode 1: Simple array obfuscation with functions of type _0x0000(digit) """
+    def __init__(self, rgx: str, script_in: str, script_out: str, magic_num, secrets: list, hex_translate: bool):
+        super().__init__(rgx, script_in, script_out, secrets, hex_translate)
+        self.m_number = magic_num
+
+    def replace_js(self):
+        """ Opens JS script, returns new file with replaced values. """
+        ele = []
+        clean = []
+
+        with open(self.s_name, 'r') as wb: ## replace name
+            lines = wb.read()
+            matches = re.findall(self.regex, lines)
+
+
+            for item in matches:
+                ele.append(item)
+            for item in ele:
+                clean.append(self.logic_js(number_1=int(item)))
+
+            try:
+                for item in clean:
+                    lines = re.sub(self.regex, "'" + item + "'", lines, count=1)
+            except re.error:
+                pass
+            
+        with open(self.o_name, 'w') as wb:
+            wb.write(lines)
+
+    def logic_js(self, number_1) -> str:
+        """ Recreate logic from array translate function. """
+        secret_array = self.s_array
+        number_1 = number_1 - self.m_number
+        return secret_array[number_1]
+
 
 def replace_js(regex: str, script_in: str, script_out: str, magic_num: int, secrets: list):
     """ Opens JS script, returns new file with replaced values. """
@@ -17,8 +108,7 @@ def replace_js(regex: str, script_in: str, script_out: str, magic_num: int, secr
 
 
         for item in matches:
-            ele.append(item[0])
-
+            ele.append(item)
         for item in ele:
             clean.append(logic_js(array=secrets, number_1=int(item), magic_num=magic_num))
 
@@ -33,17 +123,15 @@ def replace_js(regex: str, script_in: str, script_out: str, magic_num: int, secr
 
 if __name__ == '__main__':
     ### replace secrets, regex, magic_number and js_script
-    secrets = ['RhHxa', 'pfIfw', 'WEQRw', 'PBFWl', 'Conso', 'RPSJe', 'AMYoA', 'PnQMG', 'iAskX', 'LwAIn', 'XdvOk', 'is")(', 'hWXKA', 'IhZoY', 'ggpeQ', 'RiWSv', 'JbVJB', 'VPrZl', 'WVNDk', 'liyks', 'ctory', 'yaNYo', 'IdLvC', 'cREJV', 'QplQy', 'test', 'QYroL', 'nUEqx', 'fDGVT', 'gify', 'CEcPs', 'vBWIY', 'ahYli', 'AYrpF', 'state', 'ocfrF', 'zOleW', 'paCoQ', 'CgEnF', 'pVgmC', 'chalk', 'rCZmW', 'outpu', 'NKaVC', 'aZRbG', 'nakmt', '(((.+', 'BIrKZ', 'tiSGr', 'wMode', 'phsdA', 'bbypV', 'SPUAw', 'wKqnb', 'gLzoD', 'naNyd', 'stGuy', 'QGJtz', 'IVjll', 'rMOps', 'jCQiG', 'creat', '57349mJljKT', 'PhKvC', 'mcwAU', 'UieJB', '53627', 'vqJZc', 'RYmWZ', 'check', 'JHzPD', 'jLOTc', 'qHUVh', 'uKASB', 'zFHjA', 'vWSQC', 'LndyS', 'YdOjv', 'ForWi', 'ected', 'ooCMI', 'n (fu', 'wINOR', 'ZmAFx', 'kHQCE', 'nctio', 'RDqaa', 'title', 'NwJMJ', 'NRuWU', 'QPfQf', 'zfFoY', 'ZUCFp', 'gUPxB', 'JFXtB', 'IUcAf', 'kLYmB', 'DjDCK', 'FileS', 'BFdpu', 'AWHyR', 'ZGoUH', 'kQLDQ', 'pMZVc', 'input', 'wOldX', 'FZnrh', 'recur', 'fZHom', 'a-zA-', 'gger', 'rect ', 'bCBol', 'BLswl', 'XTnrZ', 'kChYm', 'qhsZn', 'QFluK', 'eZVWe', '.com', 'sHldH', 'nstru', 'ite t', 'IpCeI', 'oJTis', 'cFVdC', 'lHRaD', 'aYbOK', 'RCiKq', 'qHjDK', 'qnqWL', 'XdLhf', 'rhtNX', 'vQWff', 'rtYvA', ' [', 'gIPZO', ' not ', 'LsLdJ', 'YZLKx', 'oJqfX', 'eDire', 'RkzVY', 'YDQzI', 'pWTeD', 'YyWtM', 'www.g', 'wnfbo', 'yrbtV', 'MTRfT', 
-' to f', 'pylon', 'fHklk', 'mvXaq', 'cWMCI', 'mCsfn', 'lFREs', 'ing', 'tqoDT', 'rn th', 'sive', 'tGvrI', 'DGthq', 'cFFKw', 'HYKow', 'jpGPZ', 'o JSO', 'zhAth', 'JahCp', 'njuvD', 'YMZAb', 'BJvyj', 'Riojo', 'veDSo', 'EznfN', 'txDte', 'fBkkC', 'IkSGf', 'QNeDZ', '\\( *\\', 'xHRKg', 'QcrpM', 'CsuhJ', ' an e', 'vCaSv', 'stdou', 'ile!', 'HwTjA', 'sODAW', 'PdUkQ', 'tlgYW', 'XMHHY', 'FMPQc', 'jvEet', 'qkRXg', 'YPHQv', 'dwrlm', 'lcgHZ', 'jVsKt', 'nBmFb', 'zIBJY', 'key!', 'terva', 'yZiLm', 'MNeqA', 'QxMaF', 'CozvL', 'ZeWtF', 'nPbny', 'searc', 'ructo', 'UjbGY', 'tion ', 'aHdfR', 'BZQOk', 'as oc', 'YVmfn', 'OiutT', 'BHjly', 'xtNsa', '$]*)', 'jMnmT', 'apply', 'SZylE', 'rror!', 'WuoyK', 'dXKRj', 'lengt', 'ZwZLh', 'tered', 'data', 'wgFxq', 'BZhJZ', 'XGQUW', 'NXMSe', 'PHsOG', 'CWWBq', 'File ', 'tNNuU', 'EfMRK', 'NjLVG', 'parse', 'does ', 'ForEx', 'SON', 'iEGvC', '53470Fdhzet', 'expor', 'Sexie', 'cyByw', 'DXNSP', 'NVCKi', 'CfshG', 'ot wr', 'init', '{}.co', 'SYwpk', 'eUKGH', 'once', 'await', 'HgwXN', 'rotVD', 'AcMGl', 'actio', 'zBDSz', 'Print', 'XkTaq', 'RMpqC', 'oiYjk', 'KRCMY', 'nNlCC', 'cured', 'MFHgv', 'MkwGj', 'n() ', 'IArMQ', 'jdgGQ', 'setIn', 'PKWci', 'xYafA', 'OJNBR', 'MWtVe', 'jLSFR', 'oQDsh', 'GwxrF', 'PDRwt', 'YlwCM', 'aPOvF', 'JBcBi', 'LJqFX', 'wdpqq', 'txdTF', 'isFil', 'XAeST', '581', 'RmTlO', 'qctmd', 'TbuXC', 'eFvqe', 'blkDg', 'oqSPD', 'BeVYH', 'loaNi', 'VVhqQ', 'nvWdB', 'dns', 'IKnow', 'PIXyn', 'Qeoat', 'dfuIg', 'YWSRl', 'YdRqW', 'FrVFc', 'SoZTh', 'ync', 'jNyhW', 'MBAsN', 'kMdRK', 'eYEJW', 'kRWmJ', 'WJCNZ', 'zA-Z_', 'VHaoP', 'DPxos', 'oKrqC', 'bYbtA', 'Vnpye', 'const', 'debu', 'qOiMv', '*(?:[', 'vqeii', 'jZOqt', 'XyYAo', 'write', 'vCfaj', 'jCdYh', 'TKCMe', 'CQYGq', 'yuHqY', 'OodlL', ' func', 'DtPuQ', 'BoqSP', 'rface', 'mazJd', 'while', 'VPwHT', 'XAdUA', 'FHhjS', '1652860WxdHHM', 'qEZdW', 'getUR', 'TPnIg', 'VIAyn', 'GzsoA', 'miCGq', 'HCIDU', 'umoCs', 'NPkHE', 'bCXQx', 'SgdCP', 'e ent', 'AqpNd', 'CIjdy', 'mkdir', 'Sync', 'SMqAB', 'ctoNu', 'WgoVW', 'rFpVG', 'ROnWd', 'sSync', 'kxoYz', 'cGNEq', 'GBBji', 'toStr', 'ombtl', 'SNMaG', 'idTUq', 'EtLxu', 'ziIms', 'yJtXt', 'YqgFs', '14yBvOYi', 'EvNzP', 'gnUTs', 'hplVN', 'aEmsd', 'Lsixx', 'lJzUz', 'hbMNn', 'MJOif', 'hgGkU', 'YUbqx', 'gYjeP', 'FnNYw', 'SRGPq', 'FVdzW', 'chain', 'eFile', 'BTzZW', 'Vsxgn', 'SSBYB', 'sMbZU', 'LFNat', 'has e', 'LKYlV', 'DDwqq', 'sWQVf', 'oOMBP', 'No Wi', 'RXfgM', 'jlQge', 'EduTL', 'call', 'yZnwp', 'gBYZc', 'yFOdB', 'soTxH', 'sotHJ', 'PgKOs', 'log', 'xCqlN', 'XzwqX', 'SztkI', 'MeOgQ', 'Objec', 'JeHCr', 'txmGL', 'KZsBI', 'pMCZv', 'bHJdc', 'SOFCd', 'ine', 'CVpMA', 'QPSVm', 'GNUOK', 'rOMnH', 'ion *', 'Ikmtt', 'axios', 'XXjiT', 'nal', 'exist', 'rphMy', 'txStz', 'xMZaQ', 'KYTSM', 'pVxPk', 'TwhZM', 'ZyvVZ', 'Z_$][', 'ozuXP', 'JoxMV', 'mnNoS', 'JrTmV', 'HjAJE', 'nSCaB', 'sslTx', 'iSPxS', 'Sqwjw', 'mtSja', 'gEQsc', 'ygMOl', 'TKnnu', 'TIlmN', 'sUhla', 'mOKmJ', 'jISkE', 'WuZEl', 'MupLS', 'DiCKc', '3656148JYoALH', 'FvfRm', 
-'JgbJa', 'fOmhp', 'UoVtf', 'WhSnB', 'EVPSO', 'nMMVY', 'ivYDN', 'readF', 'qcskp', 'oOxEM', 'get', 'PSxUs', 'JemAo', 'nTNsx', 'tALTX', 'XARpR', 'Dneig', '\\+\\+ ', 'JHfTa', 'delet', 'vONEu', 'mKqSs', 'gsAdu', 'RDXQU', 'EfrNK', 
-' (tru', 'tivit', 'tsASB', 'KVeuS', 'clear', 'zhwoC', 'Can n', 'xwGAf', 'MEMrh', 'XLORz', 'ntSxf', 'DKnFG', '-Fi C', 'QjNcN', 'NCapK', 'FkfQa', 'dKxXx', 'wvyhs', 'stdin', 'kRSnz', 'WRQeZ', 'ZtXig', 'teDwk', 'oMgLk', 'readJ', 
-'IjJXo', 'ZUYzZ', 'rQWNr', 'hhNqN', 'CHpBn', 'ddeib', 'JoMhu', 'sleep', 'fromC', 'quest', 'KeMwn', 'VQhKV', 'GXytB', 'IsThe', 'bIOSb', 'GvScR', 'jeEBc', 'NILOQ', 'tXqSF', '"retu', 'iFiAP', 'GPDTE', 'jMoMS', 'KRpOy', 'bnlEq', 
-'aXzlr', 'LDaEJ', 'WlZbl', 'bMzJL', 'qRcFk', '2221944WcfWls', 'Incor', 'jXvZy', 'ScuyW', 'FlesS', 'File', 'EleSQ', 'UwPaG', 'ErTNx', 'MsGYm', 'Could', 'NIYPR', 'FpthD', 'baoGm', '0-9a-', 'KIBDy', 'jZkGo', 'OjLKZ', 'ySlmm', 'PpCZJ', '965990lGpAtD', 'lYVUN', 'tOpnG', 'VnUwe', 'Pleas', 'YcdTT', 'JcsFY', 'utf8', 'oXSht', 'retur', 'close', 'jkyJo', 'post', 'FXBNB', 'QPpXI', 'lShwq', 'BIKWd', 'termi', 'resol', 'ion', 'tZANv', 'OUUeE', 'ZdQTB', 'YFvUE', 'tXole', 'VdtNi', 'xwxsC', 'YFpgi', 'TsSEh', 'eInte', 'PooHZ', 'not e', 'llhIp', 'PJNeB', ']0;', 'readl', 'IZunI', 'ATzCP', 'EPrnh', 'gHopi', 'mazla', 'HXVeA', 'qjywI', 'e) {}', 'hex', 'GPpsx', 'WVnGN', ')+)+)', 'onnec', 'setRa', 'eCwjA', 'BJyFI', 'RPlkn', '20826832lioSoD', 'cTjNW', 'wIjud', 'sJStb', 'mqFAf', 'IVPId', ' ', 'veVQj', 'fcsDw', 'TIsMj', 'diLee', 'qBGye', 'ile', 'iLnNo', 'fszyV', 'MMuxw', 'yqPKD', 'MMInV', 'UoIrl', 'xhjMR', 'ncoun', 
-'JlrjB', 'MWhBv', 'cVBvE', 'HQmPZ', 'WWwLP', 'print', 'VRcYx', 'cwnxJ', 'utKDK', 'OcbAn', 'oogle', 'red', 'IvphZ', 'hOasD', 'harCo', 'wQUsI', 'xEwLU', 'PcbrC', 'knXTS', 'xaFrm', 'nwnqW', 'ror h', 'HxxwH', 'bpAgS', 'then', 'itoaP', 'KlZPS', 'EIjvo', 'eZLvO', 'kZVEm', 'er a ', 'niYTw', 'XHwok', 'OxRhB', 'dFTQb', 'exit', 'TXUXt', 'vfpLa', 'Hcvhc', 'ctor(', 'klGQv', 'XGtzJ', 'CIgtJ', 'hhkKs', 'sfwpD', 'funct', 'GCShF', 'AHDoZ', 'FRKAO', 'ZdOwL', 'NGRwl', 'UVGIi', 'AKmrD', 'phTRf', 'RBBsW', 'y det', 'IynRp', 'PoDzt', 'count', 'CzRjC', 'hvALN', 'JSON', 'mPzcc', 'dlyef', 'An er', 'krULr', 'xTZvL', 'postU', 'ZLtTN', 'NixkT', 'GYqje', 'FsWlI', 'KHhve', 'HBwri', 'xist!', 'strin', 'lZPQV', 'hzAgh', 'fchTI'] 
+    secrets = ["WScript.Shell", "bind", "30JCZLUg", "4. Open one of the following links in your browser to download decryptor:", "      - If you do not pay in 3 days YOU LOOSE ALL YOUR FILES.", "1A8nxYR1FNMyjn71RTgmwugHB9Y44p7Akg", "rGhXR", "1|4|0|3|2", "4QIObMC", "exception", "%%i", "jmJkN", "8057VEfgvQ", "1|2|0|5|3|4", "constructor", "Crypted", "4|0|2|5|1|3", "CreateObject", "      - Your files can be decrypted only after you make payment.", "{}.constructor(\&quot;return this\&quot;)( )", "BHcnL", "saveToFile", "xMlvq", "send", " /t REG_SZ /F /D ", "2|4|5|0|1|3", "5940035hpvWwP", "responseBody", "      http://", "LRAf9RSu-l5rAk8FM7MZAj05YpDtxEyEuY72K46WGdFbZP20XuLJwoYHSJnJB47wIa9baToAFno_", " BTC to this Bitcoin address:", "were encrypted using strong RSA-1024 algorithm with a unique key.", "copy /y ", "HKCR", "RDWga", "__proto__", "Run", ".crypted", "warn", " &amp; notepad.exe ", "error", " /ve /t REG_SZ /F /D ", " &amp; call ", "puntogel.com pme.com.vn www.staubsaugrobotern.com felicavet.hu www.tattoogreece.gr", "kJoty", "Close", "&amp;dc=283385", " /V ", "Windows", "lRFGk", "      https://localbitcoins.com/buy_bitcoins", ".txt", "/counter/?ad=", "%UserProfile%", " %%i in (*.zip *.rar *.7z *.tar *.gz *.xls *.xlsx *.doc *.docx *.pdf *.rtf *.ppt *.pptx *.sxi *.odm *.odt *.mpp *.ssh *.pub *.gpg *.pgp *.kdb *.kdbx *.als *.aup *.cpr *.npr *.cpp *.bas *.asm *.cs *.php *.pas *.vb *.vcproj *.vbproj *.mdb *.accdb *.mdf *.odb *.wdb *.csv *.tsv *.psd *.eps *.cdr *.cpt *.indd *.dwg *.max *.skp *.scad *.cad *.3ds *.blend *.lwo *.lws *.mb *.slddrw *.sldasm *.sldprt *.u3d *.jpg *.tiff *.tif *.raw *.avi *.mpg *.mp4 *.m4v *.mpeg *.mpe *.wmf *.wmv *.veg *.vdi *.vmdk *.vhd *.dsk) do (REN ", "open", "size", "Please follow this manual:", ".exe ", "277013bVYGSM", "1. Create Bitcoin wallet here:", "WriteLine", "221152wvqHVx", "HKCU", "prototype", "end", "Scripting.FileSystemObject", "&amp;rnd=297188", "apply", "PLEASE REMEMBER:", "      ", "5. Run decryptor to restore your files.", "hBogs", "822843", "33icHGDc", "      - It`s useless to reinstall Windows, update antivirus software, etc.", "Microsoft", "XguMu", "table", "UoIvj", "3. Send ", "split", "7096zCOzrv", "toString", "notepad.exe ", "5394246KhORef", "trace", "SOFTWARE", "kEXUm", "fromCharCode", "type", "REG ADD ", "zKhtd", "MSXML2.XMLHTTP", "close", "Desktop", "4|1|2|3|0|5", "length", "command", "551106EgDWwT", "72fhyFIe", " &amp;&amp; for /r ", "HQEKt", "18933780SdKtwj", "shell", "%%~nxi.crypted", ".cmd", "45|31|2|22|36|23|5|35|14|34|19|44|27|28|18|32|47|3|41|29|0|37|30|26|20|4|6|15|40|13|24|46|21|8|39|9|16|25|38|33|17|1|11|7|12|43|10|42", "GGMhj", "FileExists", "CreateTextFile", "write", "status", "DECRYPT.txt", "ATTENTION!", "GET", "position", "log", "%AppData%", ".exe", "console", "http://"] 
     
-    regex = '_0x3a87\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## replace this
-    magic_number = 105
-    js_script = 'framework.js_'
+
+    # TODO: support for multiple regex, replace string for array?
+    regex = r'_0x47edfc\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 2 digit
+    regex2 = r'_0x303630\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 1 digit
+    magic_number = 310
+    js_script = 'ran.js_'
     new_js_script = 'new_' + js_script
 
-    replace_js(regex, js_script, new_js_script, magic_number, secrets)
+    ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, hex_translate=True)
+    ArrayDeobfs.replace_js()
