@@ -5,20 +5,15 @@
 # 4.Replace the variable js_script with the name of the script to deobfuscate
 
 # TODO: add options for 1,2,3,4 argument function to replace
-# args parse, better feedback, pluggins, multiple regex
+# args parse, better feedback, pluggins
 # remember, stick to what you can do. theres about 10 days left
+from pathlib import Path
+import argparse
 import re
-
-def logic_js(array: list, number_1: int, magic_num: int) -> str:
-    """ Recreate logic from array translate function. """
-    secret_array = array   
-    number_1 = number_1 - magic_num
-    return secret_array[number_1]
-
 
 class Array_Replace:
     """ Handles different kinds of array-based deobfuscation. """
-    def __init__(self, rgx, script_in: str, script_out: str, secrets: list, hex_translate: bool):
+    def __init__(self, rgx, script_in: str, script_out: str, secrets: list, hex_translate=False):
         self.s_name = script_in
         self.o_name = script_out 
         self.s_array = secrets
@@ -59,10 +54,16 @@ class Array_Replace:
 
         self.s_name = self.o_name
 
+    def getSize(self):
+        """ Prints size of the file in KB. """
+        kb_size = Path(self.s_name).stat().st_size / 1000
+        print(f"Size: {kb_size}KB")
+
         
 class mode_1(Array_Replace):
     """ Mode 1: Simple array obfuscation with functions of type _0x0000(digit) """
-    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate: bool):
+    """ regex example: r'_0x446cb2\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'"""
+    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate=False):
         super().__init__(rgx, script_in, script_out, secrets, hex_translate)
         self.m_number = magic_num
 
@@ -98,10 +99,13 @@ class mode_1(Array_Replace):
         return secret_array[number_1]
 
 class mode_2(Array_Replace):
-    """ Mode 2: Array obfuscation with functions of type _0x00000(digit1, digit2)"""
-    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate: bool):
+    """ Mode 2: Array obfuscation with functions of type _0x00000(digit1, digit2). """
+    """ the arg secrets_index will determine which digit is the one used for the logic. """
+    """ regex example: r'_0x47edfc\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'"""
+    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate: bool, secrets_index: int):
         super().__init__(rgx, script_in, script_out, secrets, hex_translate)
         self.m_number = magic_num
+        self.i_array = secrets_index
 
     def replace_js(self):
         """ Opens JS script, returns new file with replaced values. """
@@ -115,7 +119,7 @@ class mode_2(Array_Replace):
 
 
                 for item in matches:
-                    ele.append(item[0])
+                    ele.append(item[self.i_array])
                 for item in ele:
                     clean.append(self.logic_js(number_1=int(item)))
 
@@ -134,31 +138,8 @@ class mode_2(Array_Replace):
         number_1 = number_1 - self.m_number
         return secret_array[number_1]
 
-def replace_js(regex: str, script_in: str, script_out: str, magic_num: int, secrets: list):
-    """ Opens JS script, returns new file with replaced values. """
-    ele = []
-    clean = []
-
-    with open(script_in, 'r') as wb: ## replace name
-        lines = wb.read()
-        matches = re.findall(regex, lines)
-
-
-        for item in matches:
-            ele.append(item)
-        for item in ele:
-            clean.append(logic_js(array=secrets, number_1=int(item), magic_num=magic_num))
-
-        try:
-            for item in clean:
-                lines = re.sub(regex, "'" + item + "'", lines, count=1)
-        except re.error:
-            pass
-        
-    with open(script_out, 'w') as wb:
-        wb.write(lines)
-
 if __name__ == '__main__':
+
     ### replace secrets, regex, magic_number and js_script
     secrets = ["WScript.Shell", "bind", "30JCZLUg", "4. Open one of the following links in your browser to download decryptor:", "      - If you do not pay in 3 days YOU LOOSE ALL YOUR FILES.", "1A8nxYR1FNMyjn71RTgmwugHB9Y44p7Akg", "rGhXR", "1|4|0|3|2", "4QIObMC", "exception", "%%i", "jmJkN", "8057VEfgvQ", "1|2|0|5|3|4", "constructor", "Crypted", "4|0|2|5|1|3", "CreateObject", "      - Your files can be decrypted only after you make payment.", "{}.constructor(\&quot;return this\&quot;)( )", "BHcnL", "saveToFile", "xMlvq", "send", " /t REG_SZ /F /D ", "2|4|5|0|1|3", "5940035hpvWwP", "responseBody", "      http://", "LRAf9RSu-l5rAk8FM7MZAj05YpDtxEyEuY72K46WGdFbZP20XuLJwoYHSJnJB47wIa9baToAFno_", " BTC to this Bitcoin address:", "were encrypted using strong RSA-1024 algorithm with a unique key.", "copy /y ", "HKCR", "RDWga", "__proto__", "Run", ".crypted", "warn", " &amp; notepad.exe ", "error", " /ve /t REG_SZ /F /D ", " &amp; call ", "puntogel.com pme.com.vn www.staubsaugrobotern.com felicavet.hu www.tattoogreece.gr", "kJoty", "Close", "&amp;dc=283385", " /V ", "Windows", "lRFGk", "      https://localbitcoins.com/buy_bitcoins", ".txt", "/counter/?ad=", "%UserProfile%", " %%i in (*.zip *.rar *.7z *.tar *.gz *.xls *.xlsx *.doc *.docx *.pdf *.rtf *.ppt *.pptx *.sxi *.odm *.odt *.mpp *.ssh *.pub *.gpg *.pgp *.kdb *.kdbx *.als *.aup *.cpr *.npr *.cpp *.bas *.asm *.cs *.php *.pas *.vb *.vcproj *.vbproj *.mdb *.accdb *.mdf *.odb *.wdb *.csv *.tsv *.psd *.eps *.cdr *.cpt *.indd *.dwg *.max *.skp *.scad *.cad *.3ds *.blend *.lwo *.lws *.mb *.slddrw *.sldasm *.sldprt *.u3d *.jpg *.tiff *.tif *.raw *.avi *.mpg *.mp4 *.m4v *.mpeg *.mpe *.wmf *.wmv *.veg *.vdi *.vmdk *.vhd *.dsk) do (REN ", "open", "size", "Please follow this manual:", ".exe ", "277013bVYGSM", "1. Create Bitcoin wallet here:", "WriteLine", "221152wvqHVx", "HKCU", "prototype", "end", "Scripting.FileSystemObject", "&amp;rnd=297188", "apply", "PLEASE REMEMBER:", "      ", "5. Run decryptor to restore your files.", "hBogs", "822843", "33icHGDc", "      - It`s useless to reinstall Windows, update antivirus software, etc.", "Microsoft", "XguMu", "table", "UoIvj", "3. Send ", "split", "7096zCOzrv", "toString", "notepad.exe ", "5394246KhORef", "trace", "SOFTWARE", "kEXUm", "fromCharCode", "type", "REG ADD ", "zKhtd", "MSXML2.XMLHTTP", "close", "Desktop", "4|1|2|3|0|5", "length", "command", "551106EgDWwT", "72fhyFIe", " &amp;&amp; for /r ", "HQEKt", "18933780SdKtwj", "shell", "%%~nxi.crypted", ".cmd", "45|31|2|22|36|23|5|35|14|34|19|44|27|28|18|32|47|3|41|29|0|37|30|26|20|4|6|15|40|13|24|46|21|8|39|9|16|25|38|33|17|1|11|7|12|43|10|42", "GGMhj", "FileExists", "CreateTextFile", "write", "status", "DECRYPT.txt", "ATTENTION!", "GET", "position", "log", "%AppData%", ".exe", "console", "http://"] 
     
@@ -170,5 +151,5 @@ if __name__ == '__main__':
     js_script = 'ran.js_'
     new_js_script = 'new_' + js_script
 
-    ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, hex_translate=True)
-    ArrayDeobfs.replace_js()
+    ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets)
+    ArrayDeobfs.getSize()
