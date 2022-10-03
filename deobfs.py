@@ -18,7 +18,7 @@ def logic_js(array: list, number_1: int, magic_num: int) -> str:
 
 class Array_Replace:
     """ Handles different kinds of array-based deobfuscation. """
-    def __init__(self, rgx: str, script_in: str, script_out: str, secrets: list, hex_translate: bool):
+    def __init__(self, rgx, script_in: str, script_out: str, secrets: list, hex_translate: bool):
         self.s_name = script_in
         self.o_name = script_out 
         self.s_array = secrets
@@ -62,7 +62,7 @@ class Array_Replace:
         
 class mode_1(Array_Replace):
     """ Mode 1: Simple array obfuscation with functions of type _0x0000(digit) """
-    def __init__(self, rgx: str, script_in: str, script_out: str, magic_num, secrets: list, hex_translate: bool):
+    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate: bool):
         super().__init__(rgx, script_in, script_out, secrets, hex_translate)
         self.m_number = magic_num
 
@@ -71,24 +71,25 @@ class mode_1(Array_Replace):
         ele = []
         clean = []
 
-        with open(self.s_name, 'r') as wb: ## replace name
-            lines = wb.read()
-            matches = re.findall(self.regex, lines)
+        for obfs in self.regex:
+            with open(self.s_name, 'r') as wb: ## replace name
+                lines = wb.read()
+                matches = re.findall(obfs, lines)
 
 
-            for item in matches:
-                ele.append(item)
-            for item in ele:
-                clean.append(self.logic_js(number_1=int(item)))
+                for item in matches:
+                    ele.append(item)
+                for item in ele:
+                    clean.append(self.logic_js(number_1=int(item)))
 
-            try:
-                for item in clean:
-                    lines = re.sub(self.regex, "'" + item + "'", lines, count=1)
-            except re.error:
-                pass
-            
-        with open(self.o_name, 'w') as wb:
-            wb.write(lines)
+                try:
+                    for item in clean:
+                        lines = re.sub(obfs, "'" + item + "'", lines, count=1)
+                except re.error:
+                    pass
+                
+            with open(self.o_name, 'w') as wb:
+                wb.write(lines)
 
     def logic_js(self, number_1) -> str:
         """ Recreate logic from array translate function. """
@@ -96,6 +97,42 @@ class mode_1(Array_Replace):
         number_1 = number_1 - self.m_number
         return secret_array[number_1]
 
+class mode_2(Array_Replace):
+    """ Mode 2: Array obfuscation with functions of type _0x00000(digit1, digit2)"""
+    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate: bool):
+        super().__init__(rgx, script_in, script_out, secrets, hex_translate)
+        self.m_number = magic_num
+
+    def replace_js(self):
+        """ Opens JS script, returns new file with replaced values. """
+        ele = []
+        clean = []
+
+        for obfs in self.regex:
+            with open(self.s_name, 'r') as wb: ## replace name
+                lines = wb.read()
+                matches = re.findall(obfs, lines)
+
+
+                for item in matches:
+                    ele.append(item[0])
+                for item in ele:
+                    clean.append(self.logic_js(number_1=int(item)))
+
+                try:
+                    for item in clean:
+                        lines = re.sub(obfs, "'" + item + "'", lines, count=1)
+                except re.error:
+                    pass
+                
+            with open(self.o_name, 'w') as wb:
+                wb.write(lines)
+
+    def logic_js(self, number_1) -> str:
+        """ Recreate logic from array translate function. """
+        secret_array = self.s_array
+        number_1 = number_1 - self.m_number
+        return secret_array[number_1]
 
 def replace_js(regex: str, script_in: str, script_out: str, magic_num: int, secrets: list):
     """ Opens JS script, returns new file with replaced values. """
@@ -128,7 +165,7 @@ if __name__ == '__main__':
 
     # TODO: support for multiple regex, replace string for array?
     regex = r'_0x47edfc\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 2 digit
-    regex2 = r'_0x303630\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 1 digit
+    regex2 = [r'_0x446cb2\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)', r'_0x303630\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 1 digit
     magic_number = 310
     js_script = 'ran.js_'
     new_js_script = 'new_' + js_script
