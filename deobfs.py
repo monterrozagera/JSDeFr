@@ -12,7 +12,7 @@ import re
 
 class Array_Replace:
     """ Handles different kinds of array-based deobfuscation. """
-    def __init__(self, rgx, script_in: str, script_out: str, secrets: list, hex_translate=False):
+    def __init__(self, rgx, script_in: str, script_out: str, secrets=[], hex_translate=False):
         self.s_name = script_in
         self.o_name = script_out 
         self.s_array = secrets
@@ -21,9 +21,9 @@ class Array_Replace:
 
         if self.t_hex:
             self.hexReplace()
+        if not self.s_array:
+            self.s_array = self.getSecretsArray()
 
-        self.beautify()
-        self.getSecretsArray()
 
     def countIntances(self, to_count):
         """ Counts the times that the given argument is referenced """
@@ -118,7 +118,8 @@ class Array_Replace:
                     if c != ']':
                         array += c
                     elif c == ']':
-                        print(array)
+                        array += ','
+                        return self.splitSecretsArray(array)
                 elif c == ']' and count < 100:
                     count = 0
                     array = ''
@@ -126,6 +127,15 @@ class Array_Replace:
                     count += 1
                     array += c
 
+    def splitSecretsArray(self, s_array: str) -> list:
+        """ Splits string extracted from getSecretsArray into a usable array. """
+        regex = r"[a-zA-Z\d\/]{1,29}"
+        try: 
+            secrets = re.findall(regex, s_array)
+            print("[!] Found secrets array.")
+            return secrets
+        except:
+            print("[!] Error getting secrets array. ")
 
         
 class mode_1(Array_Replace):
@@ -206,24 +216,24 @@ class mode_2(Array_Replace):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Array-based Javascript deobfuscator.')
-    parser.add_argument('-js', type=str, help='Dir to JS script.', required=False)
+    parser.add_argument('-js', type=str, help='Dir to JS script.', required=True)
     parser.add_argument('-o', type=str, help='Output file name.', required=False)
     parser.add_argument('-mn', '--magic-number', type=int, help='Decimals used for deobfuscating.', required=False)
     parser.add_argument('-a', '--array', type=str, help='Path to text file containing the array with secrets.', required=False)
-    ### replace secrets, regex, magic_number and js_script
-    secrets = ["WScript.Shell", "bind", "30JCZLUg", "4. Open one of the following links in your browser to download decryptor:", "      - If you do not pay in 3 days YOU LOOSE ALL YOUR FILES.", "1A8nxYR1FNMyjn71RTgmwugHB9Y44p7Akg", "rGhXR", "1|4|0|3|2", "4QIObMC", "exception", "%%i", "jmJkN", "8057VEfgvQ", "1|2|0|5|3|4", "constructor", "Crypted", "4|0|2|5|1|3", "CreateObject", "      - Your files can be decrypted only after you make payment.", "{}.constructor(\&quot;return this\&quot;)( )", "BHcnL", "saveToFile", "xMlvq", "send", " /t REG_SZ /F /D ", "2|4|5|0|1|3", "5940035hpvWwP", "responseBody", "      http://", "LRAf9RSu-l5rAk8FM7MZAj05YpDtxEyEuY72K46WGdFbZP20XuLJwoYHSJnJB47wIa9baToAFno_", " BTC to this Bitcoin address:", "were encrypted using strong RSA-1024 algorithm with a unique key.", "copy /y ", "HKCR", "RDWga", "__proto__", "Run", ".crypted", "warn", " &amp; notepad.exe ", "error", " /ve /t REG_SZ /F /D ", " &amp; call ", "puntogel.com pme.com.vn www.staubsaugrobotern.com felicavet.hu www.tattoogreece.gr", "kJoty", "Close", "&amp;dc=283385", " /V ", "Windows", "lRFGk", "      https://localbitcoins.com/buy_bitcoins", ".txt", "/counter/?ad=", "%UserProfile%", " %%i in (*.zip *.rar *.7z *.tar *.gz *.xls *.xlsx *.doc *.docx *.pdf *.rtf *.ppt *.pptx *.sxi *.odm *.odt *.mpp *.ssh *.pub *.gpg *.pgp *.kdb *.kdbx *.als *.aup *.cpr *.npr *.cpp *.bas *.asm *.cs *.php *.pas *.vb *.vcproj *.vbproj *.mdb *.accdb *.mdf *.odb *.wdb *.csv *.tsv *.psd *.eps *.cdr *.cpt *.indd *.dwg *.max *.skp *.scad *.cad *.3ds *.blend *.lwo *.lws *.mb *.slddrw *.sldasm *.sldprt *.u3d *.jpg *.tiff *.tif *.raw *.avi *.mpg *.mp4 *.m4v *.mpeg *.mpe *.wmf *.wmv *.veg *.vdi *.vmdk *.vhd *.dsk) do (REN ", "open", "size", "Please follow this manual:", ".exe ", "277013bVYGSM", "1. Create Bitcoin wallet here:", "WriteLine", "221152wvqHVx", "HKCU", "prototype", "end", "Scripting.FileSystemObject", "&amp;rnd=297188", "apply", "PLEASE REMEMBER:", "      ", "5. Run decryptor to restore your files.", "hBogs", "822843", "33icHGDc", "      - It`s useless to reinstall Windows, update antivirus software, etc.", "Microsoft", "XguMu", "table", "UoIvj", "3. Send ", "split", "7096zCOzrv", "toString", "notepad.exe ", "5394246KhORef", "trace", "SOFTWARE", "kEXUm", "fromCharCode", "type", "REG ADD ", "zKhtd", "MSXML2.XMLHTTP", "close", "Desktop", "4|1|2|3|0|5", "length", "command", "551106EgDWwT", "72fhyFIe", " &amp;&amp; for /r ", "HQEKt", "18933780SdKtwj", "shell", "%%~nxi.crypted", ".cmd", "45|31|2|22|36|23|5|35|14|34|19|44|27|28|18|32|47|3|41|29|0|37|30|26|20|4|6|15|40|13|24|46|21|8|39|9|16|25|38|33|17|1|11|7|12|43|10|42", "GGMhj", "FileExists", "CreateTextFile", "write", "status", "DECRYPT.txt", "ATTENTION!", "GET", "position", "log", "%AppData%", ".exe", "console", "http://"] 
+    ##secrets = ["WScript.Shell", "bind", "30JCZLUg", "4. Open one of the following links in your browser to download decryptor:", "      - If you do not pay in 3 days YOU LOOSE ALL YOUR FILES.", "1A8nxYR1FNMyjn71RTgmwugHB9Y44p7Akg", "rGhXR", "1|4|0|3|2", "4QIObMC", "exception", "%%i", "jmJkN", "8057VEfgvQ", "1|2|0|5|3|4", "constructor", "Crypted", "4|0|2|5|1|3", "CreateObject", "      - Your files can be decrypted only after you make payment.", "{}.constructor(\&quot;return this\&quot;)( )", "BHcnL", "saveToFile", "xMlvq", "send", " /t REG_SZ /F /D ", "2|4|5|0|1|3", "5940035hpvWwP", "responseBody", "      http://", "LRAf9RSu-l5rAk8FM7MZAj05YpDtxEyEuY72K46WGdFbZP20XuLJwoYHSJnJB47wIa9baToAFno_", " BTC to this Bitcoin address:", "were encrypted using strong RSA-1024 algorithm with a unique key.", "copy /y ", "HKCR", "RDWga", "__proto__", "Run", ".crypted", "warn", " &amp; notepad.exe ", "error", " /ve /t REG_SZ /F /D ", " &amp; call ", "puntogel.com pme.com.vn www.staubsaugrobotern.com felicavet.hu www.tattoogreece.gr", "kJoty", "Close", "&amp;dc=283385", " /V ", "Windows", "lRFGk", "      https://localbitcoins.com/buy_bitcoins", ".txt", "/counter/?ad=", "%UserProfile%", " %%i in (*.zip *.rar *.7z *.tar *.gz *.xls *.xlsx *.doc *.docx *.pdf *.rtf *.ppt *.pptx *.sxi *.odm *.odt *.mpp *.ssh *.pub *.gpg *.pgp *.kdb *.kdbx *.als *.aup *.cpr *.npr *.cpp *.bas *.asm *.cs *.php *.pas *.vb *.vcproj *.vbproj *.mdb *.accdb *.mdf *.odb *.wdb *.csv *.tsv *.psd *.eps *.cdr *.cpt *.indd *.dwg *.max *.skp *.scad *.cad *.3ds *.blend *.lwo *.lws *.mb *.slddrw *.sldasm *.sldprt *.u3d *.jpg *.tiff *.tif *.raw *.avi *.mpg *.mp4 *.m4v *.mpeg *.mpe *.wmf *.wmv *.veg *.vdi *.vmdk *.vhd *.dsk) do (REN ", "open", "size", "Please follow this manual:", ".exe ", "277013bVYGSM", "1. Create Bitcoin wallet here:", "WriteLine", "221152wvqHVx", "HKCU", "prototype", "end", "Scripting.FileSystemObject", "&amp;rnd=297188", "apply", "PLEASE REMEMBER:", "      ", "5. Run decryptor to restore your files.", "hBogs", "822843", "33icHGDc", "      - It`s useless to reinstall Windows, update antivirus software, etc.", "Microsoft", "XguMu", "table", "UoIvj", "3. Send ", "split", "7096zCOzrv", "toString", "notepad.exe ", "5394246KhORef", "trace", "SOFTWARE", "kEXUm", "fromCharCode", "type", "REG ADD ", "zKhtd", "MSXML2.XMLHTTP", "close", "Desktop", "4|1|2|3|0|5", "length", "command", "551106EgDWwT", "72fhyFIe", " &amp;&amp; for /r ", "HQEKt", "18933780SdKtwj", "shell", "%%~nxi.crypted", ".cmd", "45|31|2|22|36|23|5|35|14|34|19|44|27|28|18|32|47|3|41|29|0|37|30|26|20|4|6|15|40|13|24|46|21|8|39|9|16|25|38|33|17|1|11|7|12|43|10|42", "GGMhj", "FileExists", "CreateTextFile", "write", "status", "DECRYPT.txt", "ATTENTION!", "GET", "position", "log", "%AppData%", ".exe", "console", "http://"] 
+    secrets = []
     args = parser.parse_args()
 
     # TODO: support for multiple regex, replace string for array?
     regex = r'_0x47edfc\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 2 digit
     regex2 = [r'_0x446cb2\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)', r'_0x303630\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 1 digit
     magic_number = 310
-    js_script = 'ran.js_'
-    new_js_script = 'new_' + js_script
+    js_script = args.js
+    new_js_script = 'new.js_'
     
     if args.o:
         new_js_script = args.o
 
     ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, True)
     ArrayDeobfs.getSize()
-    
+    ArrayDeobfs.beautify()
