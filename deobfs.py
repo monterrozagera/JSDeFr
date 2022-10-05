@@ -4,8 +4,7 @@
 # 3.Replace the regex variable with the correct name of the function that deobfuscates
 # 4.Replace the variable js_script with the name of the script to deobfuscate
 
-# TODO: add options for 1,2,3,4 argument function to replace
-# args parse, better feedback, pluggins
+# TODO: add YARA RULES integration, compatibility check, DOCUMENTATION
 from pathlib import Path
 import argparse
 import re
@@ -137,9 +136,39 @@ class Array_Replace:
         except:
             print("[!] Error getting secrets array. ")
 
+    def concatString(self):
+        """ Concatenate split strings from script. """
+        with open(self.s_name, 'r') as wb:
+            contents = wb.read()
+
+            concatenated = ''
+            for c in contents:
+                if c == "'" and concatenated[-2:] == "'+":
+                    concatenated = concatenated[:-2]
+                else:
+                    concatenated += c
+
+        with open(self.o_name, 'w') as wb:
+            wb.write(concatenated)
+
+    def shuffleArray(self, s_array: list) -> list:
+        """ Shuffles the array to the correct order for deobfuscation. """
+        pass
+
+    def parseInt(self, string) -> int:
+        """ Python version of javascript's parseInt() """
+        pass
+
+    def shift(self, array, item) -> list:
+        """ Python version of javascript's [shift] """
+        pass
+
+    def push(self, array, item) -> list:
+        """ Python version of javascript's [push] """
+        pass
         
 class mode_1(Array_Replace):
-    """ Mode 1: Simple array obfuscation with functions of type _0x0000(digit) """
+    """ Mode 1: Simple array obfuscation with functions of type _0x0000(digit) """ 
     """ regex example: r'_0x446cb2\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'"""
     def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate=False):
         super().__init__(rgx, script_in, script_out, secrets, hex_translate)
@@ -236,4 +265,5 @@ if __name__ == '__main__':
 
     ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, True)
     ArrayDeobfs.getSize()
+    ArrayDeobfs.concatString()
     ArrayDeobfs.beautify()
