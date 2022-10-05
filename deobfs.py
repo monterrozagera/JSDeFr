@@ -6,7 +6,6 @@
 
 # TODO: add options for 1,2,3,4 argument function to replace
 # args parse, better feedback, pluggins
-# remember, stick to what you can do. theres about 10 days left
 from pathlib import Path
 import argparse
 import re
@@ -24,6 +23,7 @@ class Array_Replace:
             self.hexReplace()
 
         self.beautify()
+        self.getSecretsArray()
 
     def countIntances(self, to_count):
         """ Counts the times that the given argument is referenced """
@@ -85,6 +85,11 @@ class Array_Replace:
                     beautified += f' {c}'
                 elif c ==',':
                     beautified += f'{c}'
+                elif c == ']':
+                    if beautified[-3:] == "!![":
+                        beautified = beautified [:-3] + 'true'
+                    else:
+                        beautified += c
                 else:
                     try:
                         if c != '=' and beautified[-1] == '=':
@@ -96,6 +101,31 @@ class Array_Replace:
             
         with open(self.o_name, 'w') as wb:
             wb.write(beautified)
+
+        self.s_name = self.o_name
+
+    def getSecretsArray(self) -> list:
+        """ Attempts to get secrets array. """
+        with open(self.s_name, 'r') as wb:
+            contents = wb.read()
+
+            count = 0
+            array = ''
+            for c in contents:
+                if c == '[':
+                    count = 1
+                elif count > 100:
+                    if c != ']':
+                        array += c
+                    elif c == ']':
+                        print(array)
+                elif c == ']' and count < 100:
+                    count = 0
+                    array = ''
+                elif count > 0:
+                    count += 1
+                    array += c
+
 
         
 class mode_1(Array_Replace):
@@ -196,3 +226,4 @@ if __name__ == '__main__':
 
     ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, True)
     ArrayDeobfs.getSize()
+    
