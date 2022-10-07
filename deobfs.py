@@ -58,7 +58,7 @@ class Array_Replace:
     def getSize(self):
         """ Prints size of the file in KB. """
         kb_size = Path(self.s_name).stat().st_size / 1000
-        print(f"Size: {kb_size}KB")
+        print(f"[!] Size: {kb_size}KB")
 
     def beautify(self):
         """ Reformats the script to add newlines and tabs. """
@@ -66,7 +66,7 @@ class Array_Replace:
             contents = wb.read()
 
             tabs = ''
-            beautified = ''
+            beautified = ''  
 
             for c in contents:
                 if c == '{':       
@@ -75,11 +75,15 @@ class Array_Replace:
                 elif c == ';':
                     beautified += f'{c}\n' + tabs
                 elif c == '}':
-                    tabs = tabs[:-1]
-                    if beautified[-2] == '}':
-                        beautified += f'{tabs}{c}\n'
+                    brackets_handler = -abs(len(tabs)) + -abs(len(tabs)) # fix to handle brackets {} correctly
+                    if beautified[brackets_handler] == '{':
+                        beautified = beautified[:brackets_handler] + '{}'
                     else:
-                        beautified = beautified[:-1] + f'{c}\n{tabs}'
+                        tabs = tabs[:-1]
+                        if beautified[-2] == '}':
+                            beautified += f'{tabs}{c}\n'
+                        else:
+                            beautified = beautified[:-1] + f'{c}\n{tabs}'
                 elif c == '=' and beautified[-1] != '=':
                     beautified += f' {c}'
                 elif c ==',':
@@ -102,6 +106,7 @@ class Array_Replace:
             wb.write(beautified)
 
         self.s_name = self.o_name
+        print("[!] Beautified script.")
 
     def getSecretsArray(self) -> list:
         """ Attempts to get secrets array. """
@@ -134,7 +139,7 @@ class Array_Replace:
             print("[!] Found secrets array.")
             return secrets
         except:
-            print("[!] Error getting secrets array. ")
+            print("[!] Error splitting secrets array. ")
 
     def concatString(self):
         """ Concatenate split strings from script. """
@@ -151,21 +156,56 @@ class Array_Replace:
         with open(self.o_name, 'w') as wb:
             wb.write(concatenated)
 
-    def shuffleArray(self, s_array: list) -> list:
-        """ Shuffles the array to the correct order for deobfuscation. """
-        pass
 
-    def parseInt(self, string) -> int:
+    def parseInt(self, string, magic_number, secrets_array) -> int:
         """ Python version of javascript's parseInt() """
-        pass
 
-    def shift(self, array, item) -> list:
-        """ Python version of javascript's [shift] """
-        pass
+        buffer = ''
+        parenthesis = 0
+        passed = False
+        for c in string:
+            if c == '(' and buffer[-8:] == 'parseInt':
+                buffer = ''
+                passed = True
+            elif passed:
+                if c == '(':
+                    parenthesis += 1
+                elif c == ')':
+                    parenthesis -= 1
 
-    def push(self, array, item) -> list:
-        """ Python version of javascript's [push] """
-        pass
+                if not parenthesis and c == ')':
+                    break
+
+                buffer += c
+
+            elif not passed:
+                buffer += c
+
+        passed = False
+        index = ''
+        for c in buffer:
+            if c == '(':
+                passed = True
+            elif passed and c != ')':
+                index += c
+
+        secret_item = secrets_array[int(index) - magic_number]
+        secret_item = re.findall(r'\d+', secret_item)
+        result = ' '.join(secret_item) 
+        if not result:
+            return '0'
+
+
+        return result
+
+
+    def pushShift(self, array: list) -> list:
+        """ Python version of javascript's [push][shift]: add element from the front to the end of the array """
+        front = array[0]
+        new = array[1:]
+        
+        new.append(front)
+        return new
         
 class mode_1(Array_Replace):
     """ Mode 1: Simple array obfuscation with functions of type _0x0000(digit) """ 
@@ -203,6 +243,89 @@ class mode_1(Array_Replace):
         secret_array = self.s_array
         number_1 = number_1 - self.m_number
         return secret_array[number_1]
+
+    def shuffleArray(self) -> list:
+        """ Shuffles the array to the correct order for deobfuscation. """
+        regex = r'parseInt\((_*0x[\da-zA-Z]{1,9}\(\d{1,3}\))\)'
+        verify_regex = r'[a-zA-Z]*_*0x[\da-zA-Z]{1,9},\s*[+/*\-\d]{1,20}' # find the function call with the evaluatory params
+
+        with open(self.s_name, 'r') as wb:
+            contents = wb.read()
+            
+            verify_array = re.findall(verify_regex, contents)
+            verify_array = verify_array[0].split(",")
+            verify_array = verify_array[1] ## we'll be working with this variable
+
+            new_secrets_array = self.s_array
+
+            parser = '' ## we'll be working with this variable
+            add = False
+            for c in contents:
+                if c == '(' and parser[-8:] == 'parseInt' and add == False:
+                    parser = 'parseInt' + c
+                    add = True
+                elif add == True and c == ';':
+                    break
+                elif c != ';':
+                    parser += c
+
+            parse_match = re.findall(regex, parser)
+            new_parse_match = []
+            for m in parse_match:
+                new_parse_match.append(self.parseInt(m, self.m_number, new_secrets_array))
+
+            def iterateForSub(array):
+                start = 0
+                counter = len(array)
+                def looper(match):
+                    nonlocal start
+                    if counter > start:
+                        start +=1
+                        print(array[start])
+                        return array[start]
+                return looper
+
+            parser = re.sub(regex, iterateForSub(new_parse_match), parser) ## fix index out of range PLOX
+            count = len(new_secrets_array)
+            
+            while count:
+                print(parser)
+                try:
+                    parser = int(eval(parser.replace(' ', '')))
+                except SyntaxError:
+                    parser = ''
+
+                if parser == int(verify_array):
+                    self.s_array = new_secrets_array
+                    print("[!] Successfully re-shuffled array! ")
+                    break
+
+                new_secrets_array = self.pushShift(new_secrets_array)
+
+                parser = '' ## we'll be working with this variable
+                add = False
+                
+                for c in contents:
+                    if c == '(' and parser[-8:] == 'parseInt' and add == False:
+                        parser = 'parseInt' + c
+                        add = True
+                    elif add == True and c == ';':
+                        break
+                    elif c != ';':
+                        parser += c
+                
+                parse_match = re.findall(regex, parser)
+                new_parse_match = []
+                for m in parse_match:
+                    new_parse_match.append(self.parseInt(m, self.m_number, secrets_array=new_secrets_array))
+
+                for n in new_parse_match:
+                    parser = re.sub(regex, iterateForSub(start, new_parse_match), parser)
+                
+                count -= 1
+                
+                
+                
 
 class mode_2(Array_Replace):
     """ Mode 2: Array obfuscation with functions of type _0x00000(digit1, digit2). """
@@ -249,14 +372,14 @@ if __name__ == '__main__':
     parser.add_argument('-o', type=str, help='Output file name.', required=False)
     parser.add_argument('-mn', '--magic-number', type=int, help='Decimals used for deobfuscating.', required=False)
     parser.add_argument('-a', '--array', type=str, help='Path to text file containing the array with secrets.', required=False)
-    ##secrets = ["WScript.Shell", "bind", "30JCZLUg", "4. Open one of the following links in your browser to download decryptor:", "      - If you do not pay in 3 days YOU LOOSE ALL YOUR FILES.", "1A8nxYR1FNMyjn71RTgmwugHB9Y44p7Akg", "rGhXR", "1|4|0|3|2", "4QIObMC", "exception", "%%i", "jmJkN", "8057VEfgvQ", "1|2|0|5|3|4", "constructor", "Crypted", "4|0|2|5|1|3", "CreateObject", "      - Your files can be decrypted only after you make payment.", "{}.constructor(\&quot;return this\&quot;)( )", "BHcnL", "saveToFile", "xMlvq", "send", " /t REG_SZ /F /D ", "2|4|5|0|1|3", "5940035hpvWwP", "responseBody", "      http://", "LRAf9RSu-l5rAk8FM7MZAj05YpDtxEyEuY72K46WGdFbZP20XuLJwoYHSJnJB47wIa9baToAFno_", " BTC to this Bitcoin address:", "were encrypted using strong RSA-1024 algorithm with a unique key.", "copy /y ", "HKCR", "RDWga", "__proto__", "Run", ".crypted", "warn", " &amp; notepad.exe ", "error", " /ve /t REG_SZ /F /D ", " &amp; call ", "puntogel.com pme.com.vn www.staubsaugrobotern.com felicavet.hu www.tattoogreece.gr", "kJoty", "Close", "&amp;dc=283385", " /V ", "Windows", "lRFGk", "      https://localbitcoins.com/buy_bitcoins", ".txt", "/counter/?ad=", "%UserProfile%", " %%i in (*.zip *.rar *.7z *.tar *.gz *.xls *.xlsx *.doc *.docx *.pdf *.rtf *.ppt *.pptx *.sxi *.odm *.odt *.mpp *.ssh *.pub *.gpg *.pgp *.kdb *.kdbx *.als *.aup *.cpr *.npr *.cpp *.bas *.asm *.cs *.php *.pas *.vb *.vcproj *.vbproj *.mdb *.accdb *.mdf *.odb *.wdb *.csv *.tsv *.psd *.eps *.cdr *.cpt *.indd *.dwg *.max *.skp *.scad *.cad *.3ds *.blend *.lwo *.lws *.mb *.slddrw *.sldasm *.sldprt *.u3d *.jpg *.tiff *.tif *.raw *.avi *.mpg *.mp4 *.m4v *.mpeg *.mpe *.wmf *.wmv *.veg *.vdi *.vmdk *.vhd *.dsk) do (REN ", "open", "size", "Please follow this manual:", ".exe ", "277013bVYGSM", "1. Create Bitcoin wallet here:", "WriteLine", "221152wvqHVx", "HKCU", "prototype", "end", "Scripting.FileSystemObject", "&amp;rnd=297188", "apply", "PLEASE REMEMBER:", "      ", "5. Run decryptor to restore your files.", "hBogs", "822843", "33icHGDc", "      - It`s useless to reinstall Windows, update antivirus software, etc.", "Microsoft", "XguMu", "table", "UoIvj", "3. Send ", "split", "7096zCOzrv", "toString", "notepad.exe ", "5394246KhORef", "trace", "SOFTWARE", "kEXUm", "fromCharCode", "type", "REG ADD ", "zKhtd", "MSXML2.XMLHTTP", "close", "Desktop", "4|1|2|3|0|5", "length", "command", "551106EgDWwT", "72fhyFIe", " &amp;&amp; for /r ", "HQEKt", "18933780SdKtwj", "shell", "%%~nxi.crypted", ".cmd", "45|31|2|22|36|23|5|35|14|34|19|44|27|28|18|32|47|3|41|29|0|37|30|26|20|4|6|15|40|13|24|46|21|8|39|9|16|25|38|33|17|1|11|7|12|43|10|42", "GGMhj", "FileExists", "CreateTextFile", "write", "status", "DECRYPT.txt", "ATTENTION!", "GET", "position", "log", "%AppData%", ".exe", "console", "http://"] 
+
     secrets = []
     args = parser.parse_args()
 
     # TODO: support for multiple regex, replace string for array?
     regex = r'_0x47edfc\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 2 digit
-    regex2 = [r'_0x446cb2\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)', r'_0x303630\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 1 digit
-    magic_number = 310
+    regex2 = [r'[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)', r'_0x225e5c\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 1 digit
+    magic_number = 380
     js_script = args.js
     new_js_script = 'new.js_'
     
@@ -265,5 +388,7 @@ if __name__ == '__main__':
 
     ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, True)
     ArrayDeobfs.getSize()
+    ArrayDeobfs.shuffleArray()
+    ArrayDeobfs.replace_js()
+    # ArrayDeobfs.beautify()
     ArrayDeobfs.concatString()
-    ArrayDeobfs.beautify()
