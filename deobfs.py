@@ -133,7 +133,7 @@ class Array_Replace:
 
     def splitSecretsArray(self, s_array: str) -> list:
         """ Splits string extracted from getSecretsArray into a usable array. """
-        regex = r"[a-zA-Z\d\/]{1,29}"
+        regex = r"[a-zA-Z_\d\/]{1,29}"
         try: 
             secrets = re.findall(regex, s_array)
             print("[!] Found secrets array.")
@@ -191,7 +191,8 @@ class Array_Replace:
 
         secret_item = secrets_array[int(index) - magic_number]
         secret_item = re.findall(r'\d+', secret_item)
-        result = ' '.join(secret_item) 
+        result = ''.join(secret_item) ## check this for errors
+
         if not result:
             return '0'
 
@@ -274,22 +275,12 @@ class mode_1(Array_Replace):
             for m in parse_match:
                 new_parse_match.append(self.parseInt(m, self.m_number, new_secrets_array))
 
-            def iterateForSub(array):
-                start = 0
-                counter = len(array)
-                def looper(match):
-                    nonlocal start
-                    if counter > start:
-                        start +=1
-                        print(array[start])
-                        return array[start]
-                return looper
+            for n in new_parse_match:
+                parser = re.sub(regex, n, parser, count=1)
 
-            parser = re.sub(regex, iterateForSub(new_parse_match), parser) ## fix index out of range PLOX
             count = len(new_secrets_array)
             
             while count:
-                print(parser)
                 try:
                     parser = int(eval(parser.replace(' ', '')))
                 except SyntaxError:
@@ -320,7 +311,7 @@ class mode_1(Array_Replace):
                     new_parse_match.append(self.parseInt(m, self.m_number, secrets_array=new_secrets_array))
 
                 for n in new_parse_match:
-                    parser = re.sub(regex, iterateForSub(start, new_parse_match), parser)
+                    parser = re.sub(regex, n, parser, count=1)
                 
                 count -= 1
                 
