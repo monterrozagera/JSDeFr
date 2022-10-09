@@ -4,7 +4,8 @@
 # 3.Replace the regex variable with the correct name of the function that deobfuscates
 # 4.Replace the variable js_script with the name of the script to deobfuscate
 
-# TODO: add YARA RULES integration, compatibility check, DOCUMENTATION
+# TODO: add YARA RULES integration, compatibility check, DOCUMENTATION, fix double space when beautify non one liners issue, 
+# findMagicNumber, base64decode
 from pathlib import Path
 import argparse
 import re
@@ -123,6 +124,7 @@ class Array_Replace:
                         array += c
                     elif c == ']':
                         array += ','
+                        print(array)
                         return self.splitSecretsArray(array)
                 elif c == ']' and count < 100:
                     count = 0
@@ -131,12 +133,31 @@ class Array_Replace:
                     count += 1
                     array += c
 
+    def getMagicNumber(self) -> int:
+        """ Attempts to get magic number. """
+        regex = r'=*\s*[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\s*-\s*\b0*x*[0-9A-Fa-f]{1,5};*'
+
+        with open(self.s_name, 'r') as wb:
+            contents = wb.read()
+            magic_number = re.findall(regex, contents)
+
+            if magic_number:
+                magic_number = magic_number[0].split('-')
+                magic_number = re.findall(r'^\d+', magic_number[1])
+                print(f"[!] Found magic number: {magic_number[0]}")
+                return int(magic_number[0])
+            else:
+                print("[!] Could not find magic number.")
+            
+
     def splitSecretsArray(self, s_array: str) -> list:
         """ Splits string extracted from getSecretsArray into a usable array. """
-        regex = r"[a-zA-Z_\d\/]{1,29}"
-        try: 
-            secrets = re.findall(regex, s_array)
+        regex = r"[a-zA-Z_\\\s\d\/]{1,29}"
+        try:
+            secrets = re.sub(r'\\x20', ' ', s_array)
+            secrets = re.findall(regex, secrets)
             print("[!] Found secrets array.")
+
             return secrets
         except:
             print("[!] Error splitting secrets array. ")
@@ -190,7 +211,7 @@ class Array_Replace:
                 index += c
 
         secret_item = secrets_array[int(index) - magic_number]
-        secret_item = re.findall(r'\d+', secret_item)
+        secret_item = re.findall(r'^\d+', secret_item)
         result = ''.join(secret_item) ## check this for errors
 
         if not result:
@@ -215,6 +236,9 @@ class mode_1(Array_Replace):
         super().__init__(rgx, script_in, script_out, secrets, hex_translate)
         self.m_number = magic_num
 
+        if not self.m_number:
+            self.m_number = self.getMagicNumber()
+
     def replace_js(self):
         """ Opens JS script, returns new file with replaced values. """
         ele = []
@@ -233,8 +257,9 @@ class mode_1(Array_Replace):
                 try:
                     for item in clean:
                         lines = re.sub(obfs, "'" + item + "'", lines, count=1)
-                except re.error:
-                    pass
+                except re.error as e:
+                    print('[!!] Error replacing some instances')
+                    print(e)
                 
             with open(self.o_name, 'w') as wb:
                 wb.write(lines)
@@ -245,7 +270,7 @@ class mode_1(Array_Replace):
         number_1 = number_1 - self.m_number
         return secret_array[number_1]
 
-    def shuffleArray(self) -> list:
+    def rotateArray(self) -> list:
         """ Shuffles the array to the correct order for deobfuscation. """
         regex = r'parseInt\((_*0x[\da-zA-Z]{1,9}\(\d{1,3}\))\)'
         verify_regex = r'[a-zA-Z]*_*0x[\da-zA-Z]{1,9},\s*[+/*\-\d]{1,20}' # find the function call with the evaluatory params
@@ -263,7 +288,12 @@ class mode_1(Array_Replace):
             add = False
             for c in contents:
                 if c == '(' and parser[-8:] == 'parseInt' and add == False:
-                    parser = 'parseInt' + c
+                    if parser[-9:] == '-parseInt':
+
+                        parser = '-parseInt' + c
+                    else:
+                        parser = 'parseInt' + c
+                    
                     add = True
                 elif add == True and c == ';':
                     break
@@ -274,13 +304,16 @@ class mode_1(Array_Replace):
             new_parse_match = []
             for m in parse_match:
                 new_parse_match.append(self.parseInt(m, self.m_number, new_secrets_array))
-
+            #print(parser)
+            #print(new_parse_match)
             for n in new_parse_match:
                 parser = re.sub(regex, n, parser, count=1)
-
+            # print(parser)
             count = len(new_secrets_array)
             
             while count:
+                #print(parser)
+                #print(new_secrets_array)
                 try:
                     parser = int(eval(parser.replace(' ', '')))
                 except SyntaxError:
@@ -288,9 +321,11 @@ class mode_1(Array_Replace):
 
                 if parser == int(verify_array):
                     self.s_array = new_secrets_array
-                    print("[!] Successfully re-shuffled array! ")
+                    print("[!] Successfully rotated array! ")
                     break
-
+                
+                #print(parser)
+                #print(verify_array)
                 new_secrets_array = self.pushShift(new_secrets_array)
 
                 parser = '' ## we'll be working with this variable
@@ -298,7 +333,11 @@ class mode_1(Array_Replace):
                 
                 for c in contents:
                     if c == '(' and parser[-8:] == 'parseInt' and add == False:
-                        parser = 'parseInt' + c
+                        if parser[-9:] == '-parseInt':
+                            parser = '-parseInt' + c
+                        else:
+                            parser = 'parseInt' + c
+                        
                         add = True
                     elif add == True and c == ';':
                         break
@@ -346,7 +385,7 @@ class mode_2(Array_Replace):
                     for item in clean:
                         lines = re.sub(obfs, "'" + item + "'", lines, count=1)
                 except re.error:
-                    pass
+                    print('[!] Error replacing.')
                 
             with open(self.o_name, 'w') as wb:
                 wb.write(lines)
@@ -369,8 +408,8 @@ if __name__ == '__main__':
 
     # TODO: support for multiple regex, replace string for array?
     regex = r'_0x47edfc\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 2 digit
-    regex2 = [r'[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)', r'_0x225e5c\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 1 digit
-    magic_number = 380
+    regex2 = [r'[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 1 digit
+    magic_number = 0
     js_script = args.js
     new_js_script = 'new.js_'
     
@@ -379,7 +418,8 @@ if __name__ == '__main__':
 
     ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, True)
     ArrayDeobfs.getSize()
-    ArrayDeobfs.shuffleArray()
+    ArrayDeobfs.hexReplace()
+    ArrayDeobfs.rotateArray()
     ArrayDeobfs.replace_js()
-    # ArrayDeobfs.beautify()
+    ArrayDeobfs.beautify()
     ArrayDeobfs.concatString()
