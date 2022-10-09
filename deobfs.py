@@ -6,18 +6,21 @@
 
 # TODO: add YARA RULES integration, compatibility check, DOCUMENTATION, fix double space when beautify non one liners issue, 
 # findMagicNumber, base64decode
+from msilib.schema import Error
 from pathlib import Path
 import argparse
 import re
+import sys
 
 class Array_Replace:
     """ Handles different kinds of array-based deobfuscation. """
-    def __init__(self, rgx, script_in: str, script_out: str, secrets=[], hex_translate=False):
+    def __init__(self, rgx, script_in: str, script_out: str, secrets=[], hex_translate=False, base64_decode=False):
         self.s_name = script_in
         self.o_name = script_out 
         self.s_array = secrets
         self.regex = rgx
         self.t_hex = hex_translate
+        self.base64decode = base64_decode
 
         if self.t_hex:
             self.hexReplace()
@@ -117,14 +120,15 @@ class Array_Replace:
             count = 0
             array = ''
             for c in contents:
-                if c == '[':
+                if c == ' ' or c == '\n':
+                    pass
+                elif c == '[':
                     count = 1
                 elif count > 100:
                     if c != ']':
                         array += c
                     elif c == ']':
                         array += ','
-                        print(array)
                         return self.splitSecretsArray(array)
                 elif c == ']' and count < 100:
                     count = 0
@@ -135,7 +139,7 @@ class Array_Replace:
 
     def getMagicNumber(self) -> int:
         """ Attempts to get magic number. """
-        regex = r'=*\s*[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\s*-\s*\b0*x*[0-9A-Fa-f]{1,5};*'
+        regex = r'=*\s*[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\s*-\s*\b0*x*[0-9A-Fa-f]{1,5};'
 
         with open(self.s_name, 'r') as wb:
             contents = wb.read()
@@ -143,11 +147,12 @@ class Array_Replace:
 
             if magic_number:
                 magic_number = magic_number[0].split('-')
-                magic_number = re.findall(r'^\d+', magic_number[1])
-                print(f"[!] Found magic number: {magic_number[0]}")
+                magic_number = re.findall(r'^\s*\d+', magic_number[1])
+                print(f"[!] Found magic number: {int(magic_number[0])}")
                 return int(magic_number[0])
             else:
                 print("[!] Could not find magic number.")
+                return 0
             
 
     def splitSecretsArray(self, s_array: str) -> list:
@@ -159,7 +164,7 @@ class Array_Replace:
             print("[!] Found secrets array.")
 
             return secrets
-        except:
+        except Error:
             print("[!] Error splitting secrets array. ")
 
     def concatString(self):
@@ -228,12 +233,16 @@ class Array_Replace:
         
         new.append(front)
         return new
+
+    def decodeB64(self):
+        """ Decodes base64 encoding. """
+        pass
         
 class mode_1(Array_Replace):
     """ Mode 1: Simple array obfuscation with functions of type _0x0000(digit) """ 
     """ regex example: r'_0x446cb2\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'"""
-    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate=False):
-        super().__init__(rgx, script_in, script_out, secrets, hex_translate)
+    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate=False, base64_decode=False):
+        super().__init__(rgx, script_in, script_out, secrets, hex_translate, base64_decode)
         self.m_number = magic_num
 
         if not self.m_number:
@@ -285,34 +294,10 @@ class mode_1(Array_Replace):
             new_secrets_array = self.s_array
 
             parser = '' ## we'll be working with this variable
-            add = False
-            for c in contents:
-                if c == '(' and parser[-8:] == 'parseInt' and add == False:
-                    if parser[-9:] == '-parseInt':
-
-                        parser = '-parseInt' + c
-                    else:
-                        parser = 'parseInt' + c
-                    
-                    add = True
-                elif add == True and c == ';':
-                    break
-                elif c != ';':
-                    parser += c
-
-            parse_match = re.findall(regex, parser)
-            new_parse_match = []
-            for m in parse_match:
-                new_parse_match.append(self.parseInt(m, self.m_number, new_secrets_array))
-            #print(parser)
-            #print(new_parse_match)
-            for n in new_parse_match:
-                parser = re.sub(regex, n, parser, count=1)
-            # print(parser)
             count = len(new_secrets_array)
             
             while count:
-                #print(parser)
+                print(parser)
                 #print(new_secrets_array)
                 try:
                     parser = int(eval(parser.replace(' ', '')))
@@ -328,7 +313,7 @@ class mode_1(Array_Replace):
                 #print(verify_array)
                 new_secrets_array = self.pushShift(new_secrets_array)
 
-                parser = '' ## we'll be working with this variable
+                parser = ''
                 add = False
                 
                 for c in contents:
@@ -345,6 +330,10 @@ class mode_1(Array_Replace):
                         parser += c
                 
                 parse_match = re.findall(regex, parser)
+                if not parse_match:
+                    print('[!!] Not compatible with Mode 1 ex. 0x0da0s(777)')
+                    print('[!!] Check beutified output file ')
+                    sys.exit(0)
                 new_parse_match = []
                 for m in parse_match:
                     new_parse_match.append(self.parseInt(m, self.m_number, secrets_array=new_secrets_array))
@@ -400,26 +389,39 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Array-based Javascript deobfuscator.')
     parser.add_argument('-js', type=str, help='Dir to JS script.', required=True)
     parser.add_argument('-o', type=str, help='Output file name.', required=False)
-    parser.add_argument('-mn', '--magic-number', type=int, help='Decimals used for deobfuscating.', required=False)
+    parser.add_argument('-mn', '--magicnumber', type=int, help='Decimals used for deobfuscating.', required=False)
     parser.add_argument('-a', '--array', type=str, help='Path to text file containing the array with secrets.', required=False)
+    parser.add_argument('-b', '--beautify', action='store_true', help='Beautify script.', required=False)
+    parser.add_argument('-b64', '--base64', action='store_true', help='Decodes base64 items from secrets array', required=False)
+    parser.add_argument('-m1', '--mode1', action='store_true', help='Simple 0x021ab2(777) form deobfuscation.')
 
     secrets = []
     args = parser.parse_args()
 
-    # TODO: support for multiple regex, replace string for array?
-    regex = r'_0x47edfc\((\d{2,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 2 digit
+    regex = r'[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)' ## 2 digit
     regex2 = [r'[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 1 digit
     magic_number = 0
     js_script = args.js
     new_js_script = 'new.js_'
+    ArrayDeobfs = ''
     
     if args.o:
         new_js_script = args.o
+    if args.magicnumber:
+        magic_number = args.magicnumber
 
-    ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, True)
-    ArrayDeobfs.getSize()
-    ArrayDeobfs.hexReplace()
-    ArrayDeobfs.rotateArray()
-    ArrayDeobfs.replace_js()
-    ArrayDeobfs.beautify()
-    ArrayDeobfs.concatString()
+    if args.m1:
+        ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, hex_translate=True, base64_decode=True)
+    elif args.m2:
+        ArrayDeobfs = mode_2(regex2, js_script, new_js_script, magic_number, secrets, hex_translate=True, secrets_index=1)
+    else:
+        print("[!] Please choose a mode [1,2] ex. -m1")
+
+    if ArrayDeobfs:
+        ArrayDeobfs.getSize()
+        ArrayDeobfs.hexReplace()
+        ArrayDeobfs.rotateArray()
+        ArrayDeobfs.replace_js()
+        if args.beautify:
+            ArrayDeobfs.beautify()
+        ArrayDeobfs.concatString()
