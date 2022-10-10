@@ -4,13 +4,13 @@
 # 3.Replace the regex variable with the correct name of the function that deobfuscates
 # 4.Replace the variable js_script with the name of the script to deobfuscate
 
-# TODO: add YARA RULES integration, compatibility check, DOCUMENTATION, fix double space when beautify non one liners issue, 
-# findMagicNumber, base64decode
-from msilib.schema import Error
+# TODO: add YARA RULES integration, compatibility check, DOCUMENTATION base64decode
+# modify parseInt function
 from pathlib import Path
 import argparse
-import re
 import sys
+import re
+
 
 class Array_Replace:
     """ Handles different kinds of array-based deobfuscation. """
@@ -183,47 +183,17 @@ class Array_Replace:
             wb.write(concatenated)
 
 
-    def parseInt(self, string, magic_number, secrets_array) -> int:
+    def parseInt(self, secret_item: str) -> int:
         """ Python version of javascript's parseInt() """
-
-        buffer = ''
-        parenthesis = 0
-        passed = False
-        for c in string:
-            if c == '(' and buffer[-8:] == 'parseInt':
-                buffer = ''
-                passed = True
-            elif passed:
-                if c == '(':
-                    parenthesis += 1
-                elif c == ')':
-                    parenthesis -= 1
-
-                if not parenthesis and c == ')':
-                    break
-
-                buffer += c
-
-            elif not passed:
-                buffer += c
-
-        passed = False
-        index = ''
-        for c in buffer:
-            if c == '(':
-                passed = True
-            elif passed and c != ')':
-                index += c
-
-        secret_item = secrets_array[int(index) - magic_number]
         secret_item = re.findall(r'^\d+', secret_item)
         result = ''.join(secret_item) ## check this for errors
 
         if not result:
             return '0'
 
-
         return result
+
+    
 
 
     def pushShift(self, array: list) -> list:
@@ -261,7 +231,7 @@ class mode_1(Array_Replace):
                 for item in matches:
                     ele.append(item)
                 for item in ele:
-                    clean.append(self.logic_js(number_1=int(item)))
+                    clean.append(self.logic_js(number_1=int(item), new_secrets=self.s_array))
 
                 try:
                     for item in clean:
@@ -273,9 +243,9 @@ class mode_1(Array_Replace):
             with open(self.o_name, 'w') as wb:
                 wb.write(lines)
 
-    def logic_js(self, number_1) -> str:
+    def logic_js(self, number_1, new_secrets) -> str:
         """ Recreates logic from array translate function. """
-        secret_array = self.s_array
+        secret_array = new_secrets
         number_1 = number_1 - self.m_number
         return secret_array[number_1]
 
@@ -297,7 +267,7 @@ class mode_1(Array_Replace):
             count = len(new_secrets_array)
             
             while count:
-                print(parser)
+                #print(parser)
                 #print(new_secrets_array)
                 try:
                     parser = int(eval(parser.replace(' ', '')))
@@ -332,16 +302,51 @@ class mode_1(Array_Replace):
                 parse_match = re.findall(regex, parser)
                 if not parse_match:
                     print('[!!] Not compatible with Mode 1 ex. 0x0da0s(777)')
-                    print('[!!] Check beutified output file ')
+                    print('[!!] Check beautified output file ')
                     sys.exit(0)
                 new_parse_match = []
                 for m in parse_match:
-                    new_parse_match.append(self.parseInt(m, self.m_number, secrets_array=new_secrets_array))
+                    new_parse_match.append(
+                        self.parseInt(self.logic_js(self.parseIntFilter(m), new_secrets_array))
+                        )
 
                 for n in new_parse_match:
                     parser = re.sub(regex, n, parser, count=1)
                 
                 count -= 1
+
+    def parseIntFilter(self, string) -> int:
+        """ Reworking parseInt.. Mode1 only."""
+        buffer = ''
+        parenthesis = 0
+        passed = False
+        for c in string:
+            if c == '(' and buffer[-8:] == 'parseInt':
+                buffer = ''
+                passed = True
+            elif passed:
+                if c == '(':
+                    parenthesis += 1
+                elif c == ')':
+                    parenthesis -= 1
+
+                if not parenthesis and c == ')':
+                    break
+
+                buffer += c
+
+            elif not passed:
+                buffer += c
+
+        passed = False
+        index = ''
+        for c in buffer:
+            if c == '(':
+                passed = True
+            elif passed and c != ')':
+                index += c
+        
+        return int(index)
                 
                 
                 
@@ -394,6 +399,7 @@ if __name__ == '__main__':
     parser.add_argument('-b', '--beautify', action='store_true', help='Beautify script.', required=False)
     parser.add_argument('-b64', '--base64', action='store_true', help='Decodes base64 items from secrets array', required=False)
     parser.add_argument('-m1', '--mode1', action='store_true', help='Simple 0x021ab2(777) form deobfuscation.')
+    parser.add_argument('-m2', '--mode2', action='store_true', help='More advanced 0x021ab2(777, 999) form deobfuscation.')
 
     secrets = []
     args = parser.parse_args()
@@ -410,18 +416,18 @@ if __name__ == '__main__':
     if args.magicnumber:
         magic_number = args.magicnumber
 
-    if args.m1:
+    if args.mode1:
         ArrayDeobfs = mode_1(regex2, js_script, new_js_script, magic_number, secrets, hex_translate=True, base64_decode=True)
-    elif args.m2:
+    elif args.mode2:
         ArrayDeobfs = mode_2(regex2, js_script, new_js_script, magic_number, secrets, hex_translate=True, secrets_index=1)
     else:
-        print("[!] Please choose a mode [1,2] ex. -m1")
+        print("[!] Please choose a mode [1,2] ex. -m1, -m2")
 
     if ArrayDeobfs:
         ArrayDeobfs.getSize()
         ArrayDeobfs.hexReplace()
-        ArrayDeobfs.rotateArray()
-        ArrayDeobfs.replace_js()
         if args.beautify:
             ArrayDeobfs.beautify()
+        ArrayDeobfs.rotateArray()
+        ArrayDeobfs.replace_js()
         ArrayDeobfs.concatString()
