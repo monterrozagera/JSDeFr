@@ -1,5 +1,5 @@
 ardeobfs_venv/
 __pycache__/
 examples/
-*.js_
 *.py
+*.js_
