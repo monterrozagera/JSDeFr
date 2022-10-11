@@ -3,7 +3,7 @@ from __future__ import print_function, unicode_literals
 from PyInquirer import prompt
 from examples import custom_style_2
 
-def printChoicesList(function_format: str, num_choices: int) -> int:
+def printChoicesList(function_format: str, num_choices: int) -> str:
     """ Let the user choose which number will be used for deobfs """
     questions = {
             'type': 'list',

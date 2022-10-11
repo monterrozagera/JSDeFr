@@ -1,12 +1,8 @@
-# INSTRUCTIONS
-# 1.Find function containing the deobfuscation array and replace the variable 'secrets'
-# 2.Find function containing the algorithm to replace the obfuscated values with the correct values from the array and replace the variable 'magic number'
-# 3.Replace the regex variable with the correct name of the function that deobfuscates
-# 4.Replace the variable js_script with the name of the script to deobfuscate
-
-# TODO: add YARA RULES integration, compatibility check, DOCUMENTATION base64decode
-# modify parseInt function
-from ast import parse
+# TODO: add YARA RULES integration, base64decode, bruteforce
+# controlFlowFlattening eg. _0x342234{ 'first': 0x8213(234, 556) } console[0x8213(234, 522)](_0x342234['first])
+# FUTURE: mode 3 0x23gb3(333, 777, 888, 999)
+#         custom mode (choose args amount, and custom logic)
+from colorama import init, Back
 from choice_handle import printChoicesList
 from pathlib import Path
 import argparse
@@ -24,10 +20,33 @@ class Array_Replace:
         self.t_hex = hex_translate
         self.base64decode = base64_decode
 
+        self.printScriptName()
         if self.t_hex:
             self.hexReplace()
         if not self.s_array:
             self.s_array = self.getSecretsArray()
+            if not self.s_array:
+                print(Back.RED + "[!] Could not find secrets array, manually replace secrets = [] in script.")
+                sys.exit(0)
+
+        self.printSecretsArray()
+
+    def printScriptName(self):
+        """ Prints name of the loaded JS script to the screen """
+        print(f'[*] Loaded script: {self.s_name}')
+
+    def printSecretsArray(self):
+        """ Prints secrets array to the screen """
+        new = '['
+        limit = 5
+        for i in self.s_array:
+            new += i + ','
+            limit -= 1
+            if not limit:
+                new += '...'
+                break
+
+        print(f'[*] Secrets array: {new}')
 
 
     def countIntances(self, to_count):
@@ -64,7 +83,7 @@ class Array_Replace:
     def getSize(self):
         """ Prints size of the file in KB. """
         kb_size = Path(self.s_name).stat().st_size / 1000
-        print(f"[!] Size: {kb_size}KB")
+        print(f"[*] Size: {kb_size}KB")
 
     def beautify(self):
         """ Reformats the script to add newlines and tabs. """
@@ -112,7 +131,8 @@ class Array_Replace:
             wb.write(beautified)
 
         self.s_name = self.o_name
-        print("[!] Beautified script.")
+        print(Back.GREEN + "[!] Beautified script")
+        print(Back.YELLOW + "[!!] Beware of any broken { } or ; instances")
 
     def getSecretsArray(self) -> list:
         """ Attempts to get secrets array. """
@@ -150,10 +170,10 @@ class Array_Replace:
             if magic_number:
                 magic_number = magic_number[0].split('-')
                 magic_number = re.findall(r'^\s*\d+', magic_number[1])
-                print(f"[!] Found magic number: {int(magic_number[0])}")
+                print(f"[*] Magic number: {int(magic_number[0])}")
                 return int(magic_number[0])
             else:
-                print("[!] Could not find magic number.")
+                print(Back.RED + "[!] Could not find magic number.")
                 return 0
             
 
@@ -167,7 +187,7 @@ class Array_Replace:
 
             return secrets
         except:
-            print("[!] Error splitting secrets array. ")
+            print(Back.RED + "[!] Error splitting secrets array. ")
 
     def concatString(self):
         """ Concatenate split strings from script. """
@@ -237,7 +257,7 @@ class mode_1(Array_Replace):
                     for item in clean:
                         lines = re.sub(obfs, "'" + item + "'", lines, count=1)
                 except re.error as e:
-                    print('[!!] Error replacing some instances')
+                    print(Back.RED + '[!!] Error replacing some instances')
                     print(e)
                 
             with open(self.o_name, 'w') as wb:
@@ -276,7 +296,7 @@ class mode_1(Array_Replace):
 
                 if parser == int(verify_array):
                     self.s_array = new_secrets_array
-                    print("[!] Successfully rotated array! ")
+                    print(Back.GREEN + "[!] Successfully rotated array! ")
                     break
                 
                 #print(parser)
@@ -301,8 +321,9 @@ class mode_1(Array_Replace):
                 
                 parse_match = re.findall(regex, parser)
                 if not parse_match:
-                    print('[!!] Not compatible with Mode 1 ex. 0x0da0s(777)')
-                    print('[!!] Check beautified output file ')
+                    print(Back.RED + '[!!] Not compatible with Mode 1 ex. 0x0da0s(777)')
+                    print(Back.RED + '[!!] Check beautified output file ')
+                    self.beautify()
                     sys.exit(0)
                 new_parse_match = []
                 for m in parse_match:
@@ -314,6 +335,9 @@ class mode_1(Array_Replace):
                     parser = re.sub(regex, n, parser, count=1)
                 
                 count -= 1
+
+            if parser != int(verify_array):
+                print(Back.RED +  "[!] Could not rotate array. Try replacing secrets = [] variable. ")
 
     def parseIntFilter(self, string) -> int:
         """ Reworking parseInt.. Mode1 only."""
@@ -346,9 +370,7 @@ class mode_1(Array_Replace):
             elif passed and c != ')':
                 index += c
         
-        return int(index)
-                
-                
+        return int(index)             
                 
 
 class mode_2(Array_Replace):
@@ -375,19 +397,26 @@ class mode_2(Array_Replace):
 
                 for item in matches:
                     ele.append(item)
-                for item in ele:
-                    clean.append(
-                        self.logic_js(
-                            number_1=int(
-                                item[int(self.i_array) - 1]
-                                ), 
-                                new_secrets=self.s_array))
+                
+                try:
+                    for item in ele:
+                        clean.append(
+                            self.logic_js(
+                                number_1=int(
+                                    item[int(self.i_array) - 1]
+                                    ), 
+                                    new_secrets=self.s_array))
+                except IndexError as e:
+                    print(e)
+                    print(Back.RED + "[!] Index is greater than secrets array. Check beautified output and manually replace secrets = [] ")
+                    self.beautify()
+                    sys.exit(0)
 
                 try:
                     for item in clean:
                         lines = re.sub(obfs, "'" + item + "'", lines, count=1)
                 except re.error as e:
-                    print('[!!] Error replacing some instances')
+                    print(Back.RED + '[!!] Error replacing some instances')
                     print(e)
                 
             with open(self.o_name, 'w') as wb:
@@ -426,7 +455,7 @@ class mode_2(Array_Replace):
 
                 if parser == int(verify_array):
                     self.s_array = new_secrets_array
-                    print("[!] Successfully rotated array! ")
+                    print(Back.GREEN + "[!] Successfully rotated array! ")
                     break
                 
                 #print(parser)
@@ -452,28 +481,40 @@ class mode_2(Array_Replace):
                 parse_match = re.findall(regex, parser)
                 #print(parser)
                 if not parse_match:
-                    print('[!!] Not compatible with Mode 2 ex. 0x0da0s(777, 888)')
-                    print('[!!] Check beautified output file ')
+                    print(Back.RED + '[!!] Not compatible with Mode 2 ex. 0x0da0s(777, 888)')
+                    print(Back.RED + '[!!] Check beautified output file ')
+                    self.beautify()
                     sys.exit(0)
                 new_parse_match = []
                 if not self.i_array:
                     self.i_array = printChoicesList(parse_match[0], 2)
 
-                for m in parse_match:
-                    new_parse_match.append(
-                        self.parseInt(
-                            self.logic_js(
-                                self.parseIntFilter(
-                                    string=m, 
-                                    sacr_number=int(self.i_array) - 1
-                                    ), 
-                                    new_secrets_array))
-                        )
+                try:
+                    for m in parse_match:
+                        new_parse_match.append(
+                            self.parseInt(
+                                self.logic_js(
+                                    self.parseIntFilter(
+                                        string=m, 
+                                        sacr_number=int(self.i_array) - 1
+                                        ), 
+                                        new_secrets_array
+                                    )
+                                )
+                            )
+                except IndexError as e:
+                    print(Back.RED + f"ERROR: {e}")
+                    print(Back.RED + "[!] Index is greater than secrets array. Check beautified output and manually replace secrets = [] ")
+                    self.beautify()
+                    sys.exit(0)
 
                 for n in new_parse_match:
                     parser = re.sub(regex, n, parser, count=1)
                 
                 count -= 1
+            
+            if parser != int(verify_array):
+                print(Back.RED + "[!] Could not rotate array. Try replacing secrets = [] variable. ")
 
     def parseIntFilter(self, string, sacr_number) -> int:
         """ Reworking parseInt.. Mode2 """
@@ -505,32 +546,58 @@ class mode_2(Array_Replace):
                 passed = True
             elif passed and c != ')':
                 index += c
-        index = index.split(", ")
+
+        if ", " in index:       
+            index = index.split(", ")
+        elif "," in index:
+            index = index.split(",")
+
         return int(index[sacr_number])
 
-    def selectCorrectArgs(self):
-        """ Summons external function for prompting user for correct argument """
-
 if __name__ == '__main__':
+    banner = """
+       █████  █████████                     
+      ░░███  ███░░░░░███                    
+       ░███ ░███    ░░░                     
+       ░███ ░░█████████                     
+       ░███  ░░░░░░░░███                    
+ ███   ░███  ███    ░███                    
+░░████████  ░░█████████                     
+ ░░░░░░░░    ░░░░░░░░░                                                        
+                                            
+ ██████████            ███████████          
+░░███░░░░███          ░░███░░░░░░█          
+ ░███   ░░███  ██████  ░███   █ ░  ████████ 
+ ░███    ░███ ███░░███ ░███████   ░░███░░███
+ ░███    ░███░███████  ░███░░░█    ░███ ░░░ 
+ ░███    ███ ░███░░░   ░███  ░     ░███     
+ ██████████  ░░██████  █████       █████    
+░░░░░░░░░░    ░░░░░░  ░░░░░       ░░░░░     
+𝘵𝘩𝘦 𝘑𝘢𝘷𝘢𝘴𝘤𝘳𝘪𝘱𝘵 𝘋𝘦𝘰𝘣𝘧𝘶𝘴𝘤𝘢𝘵𝘪𝘰𝘯 𝘍𝘳𝘢𝘮𝘦𝘸𝘰𝘳𝘬 𝘷1.0                             
+                                            
+                                            
+    """
     parser = argparse.ArgumentParser(description='Array-based Javascript deobfuscator.')
     parser.add_argument('-js', type=str, help='Dir to JS script.', required=True)
     parser.add_argument('-o', type=str, help='Output file name.', required=False)
-    parser.add_argument('-mn', '--magicnumber', type=int, help='Decimals used for deobfuscating.', required=False)
-    parser.add_argument('-a', '--array', type=str, help='Path to text file containing the array with secrets.', required=False)
+    parser.add_argument('-mn', '--magicnumber', type=int, help='Decimals used for deobfuscating. If none provided, it will attempt to find automatically.', required=False)
+    parser.add_argument('-a', '--array', type=str, help='Path to text file containing the array with secrets. If none provided, it will attempt to find automatically.', required=False)
     parser.add_argument('-b', '--beautify', action='store_true', help='Beautify script.', required=False)
     parser.add_argument('-b64', '--base64', action='store_true', help='Decodes base64 items from secrets array', required=False)
     parser.add_argument('-m1', '--mode1', action='store_true', help='Simple 0x021ab2(777) form deobfuscation.')
     parser.add_argument('-m2', '--mode2', action='store_true', help='More advanced 0x021ab2(777, 999) form deobfuscation.')
 
-    secrets = ["WuZEl", "MupLS", "DiCKc", "3656148JYoALH", "FvfRm", "JgbJa", "fOmhp", "UoVtf", "WhSnB", "EVPSO", "nMMVY", "ivYDN", "readF", "qcskp", "oOxEM", "get", "PSxUs", "JemAo", "nTNsx", "tALTX", "XARpR", "Dneig", "\\+\\+ ", "JHfTa", "delet", "vONEu", "mKqSs", "gsAdu", "RDXQU", "EfrNK", " (tru", "tivit", "tsASB", "KVeuS", "clear", "zhwoC", "Can n", "xwGAf", "MEMrh", "XLORz", "ntSxf", "DKnFG", "-Fi C", "QjNcN", "NCapK", "FkfQa", "dKxXx", "wvyhs", "stdin", "kRSnz", "WRQeZ", "ZtXig", "teDwk", "oMgLk", "readJ", "IjJXo", "ZUYzZ", "rQWNr", "hhNqN", "CHpBn", "ddeib", "JoMhu", "sleep", "fromC", "quest", "KeMwn", "VQhKV", "GXytB", "IsThe", "bIOSb", "GvScR", "jeEBc", "NILOQ", "tXqSF", '"retu', "iFiAP", "GPDTE", "jMoMS", "KRpOy", "bnlEq", "aXzlr", "LDaEJ", "WlZbl", "bMzJL", "qRcFk", "2221944WcfWls", "Incor", "jXvZy", "ScuyW", "FlesS", "File", "EleSQ", "UwPaG", "ErTNx", "MsGYm", "Could", "NIYPR", "FpthD", "baoGm", "0-9a-", "KIBDy", "jZkGo", "OjLKZ", "ySlmm", "PpCZJ", "965990lGpAtD", "lYVUN", "tOpnG", "VnUwe", "Pleas", "YcdTT", "JcsFY", "utf8", "oXSht", "retur", "close", "jkyJo", "post", "FXBNB", "QPpXI", "lShwq", "BIKWd", "termi", "resol", "ion", "tZANv", "OUUeE", "ZdQTB", "YFvUE", "tXole", "VdtNi", "xwxsC", "YFpgi", "TsSEh", "eInte", "PooHZ", "not e", "llhIp", "PJNeB", "]0;", "readl", "IZunI", "ATzCP", "EPrnh", "gHopi", "mazla", "HXVeA", "qjywI", "e) {}", "hex", "GPpsx", "WVnGN", ")+)+)", "onnec", "setRa", "eCwjA", "BJyFI", "RPlkn", "20826832lioSoD", "cTjNW", "wIjud", "sJStb", "mqFAf", "IVPId", "    ", "veVQj", "fcsDw", "TIsMj", "diLee", "qBGye", "ile", "iLnNo", "fszyV", "MMuxw", "yqPKD", "MMInV", "UoIrl", "xhjMR", "ncoun", "JlrjB", "MWhBv", "cVBvE", "HQmPZ", "WWwLP", "print", "VRcYx", "cwnxJ", "utKDK", "OcbAn", "oogle", "red", "IvphZ", "hOasD", "harCo", "wQUsI", "xEwLU", "PcbrC", "knXTS", "xaFrm", "nwnqW", "ror h", "HxxwH", "bpAgS", "then", "itoaP", "KlZPS", "EIjvo", "eZLvO", "kZVEm", "er a ", "niYTw", "XHwok", "OxRhB", "dFTQb", "exit", "TXUXt", "vfpLa", "Hcvhc", "ctor(", "klGQv", "XGtzJ", "CIgtJ", "hhkKs", "sfwpD", "funct", "GCShF", "AHDoZ", "FRKAO", "ZdOwL", "NGRwl", "UVGIi", "AKmrD", "phTRf", "RBBsW", "y det", "IynRp", "PoDzt", "count", "CzRjC", "hvALN", "JSON", "mPzcc", "dlyef", "An er", "krULr", "xTZvL", "postU", "ZLtTN", "NixkT", "GYqje", "FsWlI", "KHhve", "HBwri", "xist!", "strin", "lZPQV", "hzAgh", "fchTI", "RhHxa", "pfIfw", "WEQRw", "PBFWl", "Conso", "RPSJe", "AMYoA", "PnQMG", "iAskX", "LwAIn", "XdvOk", 'is")(', "hWXKA", "IhZoY", "ggpeQ", "RiWSv", "JbVJB", "VPrZl", "WVNDk", "liyks", "ctory", "yaNYo", "IdLvC", "cREJV", "QplQy", "test", "QYroL", "nUEqx", "fDGVT", "gify", "CEcPs", "vBWIY", "ahYli", "AYrpF", "state", "ocfrF", "zOleW", "paCoQ", "CgEnF", "pVgmC", "chalk", "rCZmW", "outpu", "NKaVC", "aZRbG", "nakmt", "(((.+", "BIrKZ", "tiSGr", "wMode", "phsdA", "bbypV", "SPUAw", "wKqnb", "gLzoD", "naNyd", "stGuy", "QGJtz", "IVjll", "rMOps", "jCQiG", "creat", "57349mJljKT", "PhKvC", "mcwAU", "UieJB", "53627", "vqJZc", "RYmWZ", "check", "JHzPD", "jLOTc", "qHUVh", "uKASB", "zFHjA", "vWSQC", "LndyS", "YdOjv", "ForWi", "ected", "ooCMI", "n (fu", "wINOR", "ZmAFx", "kHQCE", "nctio", "RDqaa", "title", "NwJMJ", "NRuWU", "QPfQf", "zfFoY", "ZUCFp", "gUPxB", "JFXtB", "IUcAf", "kLYmB", "DjDCK", "FileS", "BFdpu", "AWHyR", "ZGoUH", "kQLDQ", "pMZVc", "input", "wOldX", "FZnrh", "recur", "fZHom", "a-zA-", "gger", "rect ", "bCBol", "BLswl", "XTnrZ", "kChYm", "qhsZn", "QFluK", "eZVWe", ".com", "sHldH", "nstru", "ite t", "IpCeI", "oJTis", "cFVdC", "lHRaD", "aYbOK", "RCiKq", "qHjDK", "qnqWL", "XdLhf", "rhtNX", "vQWff", "rtYvA", "    [", "gIPZO", " not ", "LsLdJ", "YZLKx", "oJqfX", "eDire", "RkzVY", "YDQzI", "pWTeD", "YyWtM", "www.g", "wnfbo", "yrbtV", "MTRfT", " to f", "pylon", "fHklk", "mvXaq", "cWMCI", "mCsfn", "lFREs", "ing", "tqoDT", "rn th", "sive", "tGvrI", "DGthq", "cFFKw", "HYKow", "jpGPZ", "o JSO", "zhAth", "JahCp", "njuvD", "YMZAb", "BJvyj", "Riojo", "veDSo", "EznfN", "txDte", "fBkkC", "IkSGf", "QNeDZ", "\\( *\\", "xHRKg", "QcrpM", "CsuhJ", " an e", "vCaSv", "stdou", "ile!", "HwTjA", "sODAW", "PdUkQ", "tlgYW", "XMHHY", "FMPQc", "jvEet", "qkRXg", "YPHQv", "dwrlm", "lcgHZ", "jVsKt", "nBmFb", "zIBJY", "key!", "terva", "yZiLm", "MNeqA", "QxMaF", "CozvL", "ZeWtF", "nPbny", "searc", "ructo", "UjbGY", "tion ", "aHdfR", "BZQOk", "as oc", "YVmfn", "OiutT", "BHjly", "xtNsa", "$]*)", "jMnmT", "apply", "SZylE", "rror!", "WuoyK", "dXKRj", "lengt", "ZwZLh", "tered", "data", "wgFxq", "BZhJZ", "XGQUW", "NXMSe", "PHsOG", "CWWBq", "File ", "tNNuU", "EfMRK", "NjLVG", "parse", "does ", "ForEx", "SON", "iEGvC", "53470Fdhzet", "expor", "Sexie", "cyByw", "DXNSP", "NVCKi", "CfshG", "ot wr", "init", "{}.co", "SYwpk", "eUKGH", "once", "await", "HgwXN", "rotVD", "AcMGl", "actio", "zBDSz", "Print", "XkTaq", "RMpqC", "oiYjk", "KRCMY", "nNlCC", "cured", "MFHgv", "MkwGj", "n() ", "IArMQ", "jdgGQ", "setIn", "PKWci", "xYafA", "OJNBR", "MWtVe", "jLSFR", "oQDsh", "GwxrF", "PDRwt", "YlwCM", "aPOvF", "JBcBi", "LJqFX", "wdpqq", "txdTF", "isFil", "XAeST", "581", "RmTlO", "qctmd", "TbuXC", "eFvqe", "blkDg", "oqSPD", "BeVYH", "loaNi", "VVhqQ", "nvWdB", "dns", "IKnow", "PIXyn", "Qeoat", "dfuIg", "YWSRl", "YdRqW", "FrVFc", "SoZTh", "ync", "jNyhW", "MBAsN", "kMdRK", "eYEJW", "kRWmJ", "WJCNZ", "zA-Z_", "VHaoP", "DPxos", "oKrqC", "bYbtA", "Vnpye", "const", "debu", "qOiMv", "*(?:[", "vqeii", "jZOqt", "XyYAo", "write", "vCfaj", "jCdYh", "TKCMe", "CQYGq", "yuHqY", "OodlL", " func", "DtPuQ", "BoqSP", "rface", "mazJd", "while", "VPwHT", "XAdUA", "FHhjS", "1652860WxdHHM", "qEZdW", "getUR", "TPnIg", "VIAyn", "GzsoA", "miCGq", "HCIDU", "umoCs", "NPkHE", "bCXQx", "SgdCP", "e ent", "AqpNd", "CIjdy", "mkdir", "Sync", "SMqAB", "ctoNu", "WgoVW", "rFpVG", "ROnWd", "sSync", "kxoYz", "cGNEq", "GBBji", "toStr", "ombtl", "SNMaG", "idTUq", "EtLxu", "ziIms", "yJtXt", "YqgFs", "14yBvOYi", "EvNzP", "gnUTs", "hplVN", "aEmsd", "Lsixx", "lJzUz", "hbMNn", "MJOif", "hgGkU", "YUbqx", "gYjeP", "FnNYw", "SRGPq", "FVdzW", "chain", "eFile", "BTzZW", "Vsxgn", "SSBYB", "sMbZU", "LFNat", "has e", "LKYlV", "DDwqq", "sWQVf", "oOMBP", "No Wi", "RXfgM", "jlQge", "EduTL", "call", "yZnwp", "gBYZc", "yFOdB", "soTxH", "sotHJ", "PgKOs", "log", "xCqlN", "XzwqX", "SztkI", "MeOgQ", "Objec", "JeHCr", "txmGL", "KZsBI", "pMCZv", "bHJdc", "SOFCd", "ine", "CVpMA", "QPSVm", "GNUOK", "rOMnH", "ion *", "Ikmtt", "axios", "XXjiT", "nal", "exist", "rphMy", "txStz", "xMZaQ", "KYTSM", "pVxPk", "TwhZM", "ZyvVZ", "Z_$][", "ozuXP", "JoxMV", "mnNoS", "JrTmV", "HjAJE", "nSCaB", "sslTx", "iSPxS", "Sqwjw", "mtSja", "gEQsc", "ygMOl", "TKnnu", "TIlmN", "sUhla", "mOKmJ", "jISkE"]
+    secrets = []
     args = parser.parse_args()
+    init(autoreset=True) # Colorama
 
-    regex = [r'[a-zA-Z_]*0*_*0x[\da-zA-Z]{1,9}\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 2 digit
+    regex = [r'[a-zA-Z_]*0*_*0x[\da-zA-Z]{1,9}\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,}),\s*(-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 2 digit
     regex2 = [r'[a-zA-Z]*0*_*0x[\da-zA-Z]{1,9}\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'] ## 1 digit
     magic_number = 0
     js_script = args.js
     new_js_script = 'new.js_'
     ArrayDeobfs = ''
+    print(banner)
 
     if args.o:
         new_js_script = args.o
@@ -547,8 +614,9 @@ if __name__ == '__main__':
     if ArrayDeobfs:
         ArrayDeobfs.getSize()
         ArrayDeobfs.hexReplace()
-        if args.beautify:
-            ArrayDeobfs.beautify()
         ArrayDeobfs.rotateArray()
         ArrayDeobfs.replace_js()
-        ArrayDeobfs.concatString()
+        if args.beautify:
+            ArrayDeobfs.beautify()
+            ArrayDeobfs.concatString()
+        
