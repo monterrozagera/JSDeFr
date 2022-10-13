@@ -1,7 +1,8 @@
 <a name="readme-top"></a>
-<h3 align="center">JSDeFr</h3>
 
-
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/logo.PNG" />
+</p>
   <p align="center"> Array based deobfuscation made easier.
     <br />
 
@@ -11,18 +12,11 @@
   <ol>
     <li>
       <a href="#about-the-project">About The Project</a>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
+     <li><a href="#installation">Installation</a></li>
     <li><a href="#usage">Usage</a></li>
+    <li><a href="#examples">Examples</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
     <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
 
@@ -31,19 +25,11 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-On an effort to reduce time consuming deobfuscation analysis, JSDeFr was created initially to automatically deobfuscate array-based techniques (string array replace, array shuffling, array rotate)
+On an effort to reduce time consuming deobfuscation analysis, JSDeFr was created initially to automatically deobfuscate array-based techniques (string array replace, array shuffling, array rotate). Having achieved a constant rate of successful deobfuscation, more obfuscation techniques will be added to the toolkit with the goal of creating a framework.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-
-
-<!-- GETTING STARTED -->
-## Getting Started
-
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-### Installation
+## Installation
 
   ```sh
   pip install -r requirenments.txt
@@ -59,53 +45,65 @@ To get a local copy up and running follow these simple example steps.
 
 tldr; 
   ```sh
-  python JSDeFr.py -js index.js -o new.js --mode1 --beautify  
+  python JSDeFr.py -js index.js -o new.js --mode2 --beautify  
   ```
 
-
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/running.PNG" />
+</p>
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+### Selecting a Mode
+Popular obfuscation tools replace intended strings with obfuscated function calls ( eg. 0x4fg312(222) ). The provided argument then is (in most cases) substracted with an established number which I like to call **the magic number**.
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/magic_num.PNG" />
+</p>
+The result of this logic then is used as index for the correct values array (the secrets array).
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/secrets_array.PNG" />
+</p>
 
+Now selecting a mode will depend on performing manual inspection of the script (also, if the incorrect mode is selected you will get an error). This can be done by indentifying the shuffle array logic section of the secript where a group of parseInt calls are made. 
+### Mode 1
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/parseint.png" />
+</p>
 
+In this example, we can see that inside the parseInt calls, there are calls to the function that returns the value gathered from the secrets array (_0x1c143b(395)).
+Mode 1 only works with function calls with one argument.
+### Mode 2
+Deobfuscating with mode two requires extra steps to be performed after running the script. Since two arguments are present (eg. _0x2ddb23(777, -9911), the one that is used against the magic number must be chosen.
+
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/prompt.PNG" />
+</p>
+
+<!-- EXAMPLES -->
+## Examples
+mode1_example3.js_ presents one known bug to be aware.
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/could_not_rotate.PNG" />
+</p>
+
+In some occasions, automatic finding of secrets array does not work as intended. One work around is to manually find the secrets array within the script and replace the variable inside JSDeOb.py
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/copy_array.PNG" />
+</p>
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/paste_array.PNG" />
+</p>
+<p align="center">
+  <img src="https://github.com/monterrozagera/array_deobfs/raw/master/images/now_rotates.PNG" />
+</p>
 <!-- ROADMAP -->
+
 ## Roadmap
 
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
-
-See the [open issues](https://github.com/github_username/repo_name/issues) for a full list of proposed features (and known issues).
+- [ ] Custom Mode (configurable)
+- [ ] Control Flow Flatening deobfs
+- [ ] Base64 decode
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTRIBUTING -->
-## Contributing
-
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
-
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 
 
 <!-- CONTACT -->
