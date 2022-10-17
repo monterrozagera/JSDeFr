@@ -554,6 +554,31 @@ class mode_2(Array_Replace):
 
         return int(index[sacr_number])
 
+class mode_3(Array_Replace):
+    """ Mode 3: Array obfuscation with functions of type _0x00000(digit1, digit2, digit3, digit4). """
+    """ the arg secrets_index will determine which digit is the one used for the logic. """
+    """ regex example: r'_0x47edfc\((-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,}), (-\d{1,}|\d{1,}|\d{1,}[eE]\d{1,}|-\d{1,}[eE]\d{1,})\)'"""
+
+    def __init__(self, rgx, script_in: str, script_out: str, magic_num, secrets: list, hex_translate: bool, secrets_index=0):
+        super().__init__(rgx, script_in, script_out, secrets, hex_translate)
+        self.m_number = magic_num
+        self.i_array = secrets_index
+
+        if not self.m_number:
+            self.m_number = self.getMagicNumber()
+
+    def replace_js(self):
+        pass
+
+    def logic_js(self):
+        pass
+
+    def rotateArray(self):
+        pass
+
+    def parseIntFilter(self):
+        pass
+
 if __name__ == '__main__':
     banner = """
        █████  █████████                     
