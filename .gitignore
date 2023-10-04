@@ -1,4 +1,3 @@
 .vscode/
 ardeobfs_venv/
 __pycache__/
-*.js_
